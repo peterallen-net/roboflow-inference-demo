@@ -261,6 +261,51 @@ const FinaliseStage = () => {
       boxShadow: '0 4px 15px 0 rgba(107, 114, 128, 0.3)',
       borderRadius: '8px',
     },
+    objectsTableContainer: {
+      marginTop: '1.5rem',
+    },
+    tableTitle: {
+      fontSize: '1rem',
+      fontWeight: '600',
+      marginBottom: '1rem',
+      color: '#374151',
+    },
+    tableWrapper: {
+      overflowX: 'auto',
+      backgroundColor: '#ffffff',
+      borderRadius: '8px',
+      border: '1px solid #e2e8f0',
+      boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+    },
+    objectsTable: {
+      width: '100%',
+      borderCollapse: 'collapse',
+      minWidth: '600px',
+    },
+    tableHeader: {
+      backgroundColor: '#f8fafc',
+      borderBottom: '2px solid #e2e8f0',
+    },
+    tableHeaderCell: {
+      padding: '0.75rem',
+      textAlign: 'left',
+      fontWeight: '600',
+      color: '#374151',
+      fontSize: '0.875rem',
+      textTransform: 'uppercase',
+      letterSpacing: '0.025em',
+      whiteSpace: 'nowrap',
+    },
+    tableRow: {
+      borderBottom: '1px solid #f1f5f9',
+      transition: 'all 0.2s ease',
+    },
+    tableCell: {
+      padding: '0.75rem',
+      fontSize: '0.875rem',
+      color: '#374151',
+      verticalAlign: 'top',
+    },
   };
 
   const getSummaryData = () => {
@@ -294,6 +339,57 @@ const FinaliseStage = () => {
             </div>
           ))}
         </div>
+        
+        {/* Objects Table */}
+        {workflowData.reviewedObjects && workflowData.reviewedObjects.filter(obj => !obj.exclude).length > 0 && (
+          <div style={styles.objectsTableContainer}>
+            <h4 style={styles.tableTitle}>Objects Summary</h4>
+            <div style={styles.tableWrapper}>
+              <table style={styles.objectsTable}>
+                <thead style={styles.tableHeader}>
+                  <tr>
+                    <th style={styles.tableHeaderCell}>Module No.</th>
+                    <th style={styles.tableHeaderCell}>Item No.</th>
+                    <th style={styles.tableHeaderCell}>Item Name</th>
+                    <th style={styles.tableHeaderCell}>Condition</th>
+                    <th style={styles.tableHeaderCell}>Comments</th>
+                    <th style={styles.tableHeaderCell}>Unstow</th>
+                    <th style={styles.tableHeaderCell}>Restow</th>
+                    <th style={styles.tableHeaderCell}>Cond. at Dest.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {workflowData.reviewedObjects
+                    .filter(obj => !obj.exclude)
+                    .map((obj, index) => {
+                      // Format condition combining handling code and damage codes
+                      const conditionParts = [];
+                      if (obj.handlingCode) conditionParts.push(obj.handlingCode);
+                      if (obj.damageType) {
+                        conditionParts.push(obj.damageType);
+                        if (obj.damageLocation) conditionParts.push(`(${obj.damageLocation})`);
+                      }
+                      const condition = conditionParts.length > 0 ? conditionParts.join(' ') : 'Good';
+                      
+                      return (
+                        <tr key={obj.id} style={styles.tableRow}>
+                          <td style={styles.tableCell}>M{String(index + 1).padStart(3, '0')}</td>
+                          <td style={styles.tableCell}>{index + 1}</td>
+                          <td style={styles.tableCell}>{obj.class}</td>
+                          <td style={styles.tableCell}>{condition}</td>
+                          <td style={styles.tableCell}>{obj.comments || 'None'}</td>
+                          <td style={styles.tableCell}>-</td>
+                          <td style={styles.tableCell}>-</td>
+                          <td style={styles.tableCell}>-</td>
+                        </tr>
+                      );
+                    })
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
         
         {workflowData.analysisResult?.demo_mode && (
           <div style={{

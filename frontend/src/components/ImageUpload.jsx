@@ -471,7 +471,7 @@ const ImageUpload = () => {
                     ...(activeTab === 'annotated' ? styles.activeTab : {})
                   }}
                 >
-                  📸 Annotated Image
+                  Annotated Image
                 </button>
                 <button
                   onClick={() => setActiveTab('json')}

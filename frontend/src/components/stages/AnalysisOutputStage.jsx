@@ -219,7 +219,7 @@ const AnalysisOutputStage = () => {
     <div style={styles.container}>
       <h2 style={styles.title}>Analysis Results</h2>
       <p style={styles.description}>
-        You can switch between the annotated image and raw JSON output.
+        Switch between the annotated image and raw JSON.
       </p>
 
       {/* Detection Summary Cards */}
@@ -244,7 +244,7 @@ const AnalysisOutputStage = () => {
               ...(activeTab === 'annotated' ? styles.activeTab : {})
             }}
           >
-            📸 Annotated Image
+            Annotated Image
           </button>
           <button
             onClick={() => setActiveTab('json')}
@@ -253,7 +253,7 @@ const AnalysisOutputStage = () => {
               ...(activeTab === 'json' ? styles.activeTab : {})
             }}
           >
-            📄 JSON Output
+            Raw JSON
           </button>
         </div>
 

@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { useWorkflow } from '../AnalysisWorkflow';
 
 const AnalysisOutputStage = () => {
-  const { workflowData, goToStage } = useWorkflow();
+  const { workflowData, goToStage, updateWorkflowData } = useWorkflow();
   const [activeTab, setActiveTab] = useState('annotated');
+  const [objectQuantities, setObjectQuantities] = useState({});
 
   const styles = {
     container: {
@@ -184,6 +185,102 @@ const AnalysisOutputStage = () => {
       color: 'white',
       boxShadow: '0 4px 15px 0 rgba(102, 126, 234, 0.3)',
     },
+    tableContainer: {
+      backgroundColor: '#ffffff',
+      borderRadius: '12px',
+      border: '1px solid #e2e8f0',
+      overflow: 'hidden',
+      boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+    },
+    table: {
+      width: '100%',
+      borderCollapse: 'collapse',
+    },
+    tableHeader: {
+      backgroundColor: '#f8fafc',
+      borderBottom: '2px solid #e2e8f0',
+    },
+    tableHeaderCell: {
+      padding: '1rem',
+      textAlign: 'left',
+      fontWeight: '600',
+      color: '#374151',
+      fontSize: '0.9rem',
+      textTransform: 'uppercase',
+      letterSpacing: '0.05em',
+    },
+    tableRow: {
+      borderBottom: '1px solid #f1f5f9',
+      transition: 'all 0.2s ease',
+    },
+    tableRowHover: {
+      backgroundColor: '#f8fafc',
+    },
+    tableCell: {
+      padding: '1rem',
+      color: '#374151',
+      fontSize: '0.9rem',
+    },
+    objectName: {
+      fontWeight: '600',
+      textTransform: 'capitalize',
+    },
+    confidenceBadge: {
+      padding: '0.25rem 0.75rem',
+      borderRadius: '20px',
+      fontSize: '0.8rem',
+      fontWeight: '600',
+      display: 'inline-block',
+    },
+    quantityControls: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.5rem',
+    },
+    quantityButton: {
+      width: '2rem',
+      height: '2rem',
+      borderRadius: '50%',
+      border: '1px solid #d1d5db',
+      backgroundColor: '#ffffff',
+      color: '#374151',
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: '1rem',
+      fontWeight: '600',
+      transition: 'all 0.2s ease',
+    },
+    quantityButtonHover: {
+      backgroundColor: '#f3f4f6',
+      borderColor: '#9ca3af',
+    },
+    quantityDisplay: {
+      minWidth: '2rem',
+      textAlign: 'center',
+      fontSize: '1rem',
+      fontWeight: '600',
+      color: '#374151',
+    },
+    deleteButton: {
+      width: '2rem',
+      height: '2rem',
+      borderRadius: '50%',
+      border: '1px solid #ef4444',
+      backgroundColor: '#ffffff',
+      color: '#ef4444',
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: '0.9rem',
+      transition: 'all 0.2s ease',
+    },
+    deleteButtonHover: {
+      backgroundColor: '#ef4444',
+      color: 'white',
+    },
   };
 
   const copyToClipboard = async () => {
@@ -193,6 +290,66 @@ const AnalysisOutputStage = () => {
     } catch (err) {
       console.error('Failed to copy to clipboard:', err);
     }
+  };
+
+  // Group objects by class and calculate average confidence
+  const getObjectList = () => {
+    if (!workflowData.analysisResult?.detections) return [];
+
+    const grouped = {};
+    workflowData.analysisResult.detections.forEach(detection => {
+      const className = detection.class;
+      if (!grouped[className]) {
+        grouped[className] = {
+          name: className,
+          count: 0,
+          totalConfidence: 0,
+        };
+      }
+      grouped[className].count += 1;
+      grouped[className].totalConfidence += detection.confidence;
+    });
+
+    return Object.values(grouped)
+      .filter(group => objectQuantities[group.name] !== 0) // Hide objects with 0 quantity
+      .map(group => ({
+        name: group.name,
+        confidence: Math.round((group.totalConfidence / group.count) * 100),
+        quantity: objectQuantities[group.name] || group.count, // Use custom quantity or detected count
+      }));
+  };
+
+  const updateQuantity = (objectName, change) => {
+    setObjectQuantities(prev => {
+      const currentQty = prev[objectName] || getObjectList().find(obj => obj.name === objectName)?.quantity || 1;
+      const newQty = Math.max(0, currentQty + change);
+      return {
+        ...prev,
+        [objectName]: newQty
+      };
+    });
+  };
+
+  const deleteObject = (objectName) => {
+    setObjectQuantities(prev => ({
+      ...prev,
+      [objectName]: 0
+    }));
+  };
+
+  const getConfidenceBadgeStyle = (confidence) => {
+    let bgColor, textColor;
+    if (confidence >= 80) {
+      bgColor = '#dcfce7';
+      textColor = '#166534';
+    } else if (confidence >= 60) {
+      bgColor = '#fef3c7';
+      textColor = '#92400e';
+    } else {
+      bgColor = '#fee2e2';
+      textColor = '#991b1b';
+    }
+    return { ...styles.confidenceBadge, backgroundColor: bgColor, color: textColor };
   };
 
   const getSummaryStats = () => {
@@ -244,7 +401,16 @@ const AnalysisOutputStage = () => {
               ...(activeTab === 'annotated' ? styles.activeTab : {})
             }}
           >
-            Annotated Image
+          Annotated Image
+          </button>
+          <button
+            onClick={() => setActiveTab('objectlist')}
+            style={{
+              ...styles.tab,
+              ...(activeTab === 'objectlist' ? styles.activeTab : {})
+            }}
+          >
+            Object List
           </button>
           <button
             onClick={() => setActiveTab('json')}
@@ -284,6 +450,95 @@ const AnalysisOutputStage = () => {
                   </p>
                 </div>
               )}
+            </div>
+          )}
+
+          {activeTab === 'objectlist' && (
+            <div>
+              <div style={styles.tableContainer}>
+                <table style={styles.table}>
+                  <thead style={styles.tableHeader}>
+                    <tr>
+                      <th style={styles.tableHeaderCell}>Object</th>
+                      <th style={styles.tableHeaderCell}>Confidence</th>
+                      <th style={styles.tableHeaderCell}>Quantity</th>
+                      <th style={styles.tableHeaderCell}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {getObjectList().map((obj, index) => (
+                      <tr 
+                        key={obj.name}
+                        style={styles.tableRow}
+                        onMouseEnter={(e) => e.target.parentElement.style.backgroundColor = '#f8fafc'}
+                        onMouseLeave={(e) => e.target.parentElement.style.backgroundColor = 'transparent'}
+                      >
+                        <td style={styles.tableCell}>
+                          <span style={styles.objectName}>{obj.name}</span>
+                        </td>
+                        <td style={styles.tableCell}>
+                          <span style={getConfidenceBadgeStyle(obj.confidence)}>
+                            {obj.confidence}%
+                          </span>
+                        </td>
+                        <td style={styles.tableCell}>
+                          <div style={styles.quantityControls}>
+                            <button
+                              onClick={() => updateQuantity(obj.name, -1)}
+                              style={styles.quantityButton}
+                              onMouseEnter={(e) => {
+                                e.target.style.backgroundColor = '#f3f4f6';
+                                e.target.style.borderColor = '#9ca3af';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.target.style.backgroundColor = '#ffffff';
+                                e.target.style.borderColor = '#d1d5db';
+                              }}
+                              disabled={obj.quantity === 0}
+                            >
+                              −
+                            </button>
+                            <span style={styles.quantityDisplay}>
+                              {obj.quantity}
+                            </span>
+                            <button
+                              onClick={() => updateQuantity(obj.name, 1)}
+                              style={styles.quantityButton}
+                              onMouseEnter={(e) => {
+                                e.target.style.backgroundColor = '#f3f4f6';
+                                e.target.style.borderColor = '#9ca3af';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.target.style.backgroundColor = '#ffffff';
+                                e.target.style.borderColor = '#d1d5db';
+                              }}
+                            >
+                              +
+                            </button>
+                          </div>
+                        </td>
+                        <td style={styles.tableCell}>
+                          <button
+                            onClick={() => deleteObject(obj.name)}
+                            style={styles.deleteButton}
+                            onMouseEnter={(e) => {
+                              e.target.style.backgroundColor = '#ef4444';
+                              e.target.style.color = 'white';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.target.style.backgroundColor = '#ffffff';
+                              e.target.style.color = '#ef4444';
+                            }}
+                            title="Delete object"
+                          >
+                            🗑️
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 

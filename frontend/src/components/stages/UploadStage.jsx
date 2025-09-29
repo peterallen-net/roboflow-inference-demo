@@ -66,22 +66,92 @@ const UploadStage = () => {
             message: "Analysis complete",
             detections: [
               {
-                class: "person",
-                confidence: 0.89,
-                bbox: {x: 100, y: 150, width: 200, height: 300},
+                class: "bed",
+                confidence: 0.95,
+                bbox: {
+                  x: 120,
+                  y: 200,
+                  width: 400,
+                  height: 300
+                },
                 id: 1
               },
               {
-                class: "chair", 
-                confidence: 0.76,
-                bbox: {x: 300, y: 200, width: 150, height: 180},
+                class: "nightstand",
+                confidence: 0.84,
+                bbox: {
+                  x: 560,
+                  y: 240,
+                  width: 100,
+                  height: 120
+                },
                 id: 2
               },
               {
-                class: "table",
-                confidence: 0.82,
-                bbox: {x: 200, y: 350, width: 180, height: 120},
+                class: "lamp",
+                confidence: 0.87,
+                bbox: {
+                  x: 580,
+                  y: 180,
+                  width: 60,
+                  height: 100
+                },
                 id: 3
+              },
+              {
+                class: "dresser",
+                confidence: 0.82,
+                bbox: {
+                  x: 700,
+                  y: 300,
+                  width: 180,
+                  height: 200
+                },
+                id: 4
+              },
+              {
+                class: "mirror",
+                confidence: 0.79,
+                bbox: {
+                  x: 720,
+                  y: 120,
+                  width: 160,
+                  height: 200
+                },
+                id: 5
+              },
+              {
+                class: "closet",
+                confidence: 0.86,
+                bbox: {
+                  x: 50,
+                  y: 100,
+                  width: 200,
+                  height: 400
+                },
+                id: 6
+              },
+              {
+                class: "painting",
+                confidence: 0.80,
+                bbox: {
+                  x: 420,
+                  y: 90,
+                  width: 220,
+                  height: 140
+                },
+                id: 7
+              },
+              {
+                class: "rug",
+                confidence: 0.83,
+                bbox: {
+                  x: 200,
+                  y: 500,
+                  width: 300,
+                  height: 180
+                },
+                id: 8
               }
             ],
             processing_time: 2.34,
@@ -90,7 +160,7 @@ const UploadStage = () => {
               height: 768
             },
             model_version: "v8.0",
-            timestamp: new Date().toISOString(),
+            timestamp: "2025-09-29T21:11:03.628Z",
             demo_mode: true,
             note: "This is demo data. Backend server is not running on localhost:8000"
           };

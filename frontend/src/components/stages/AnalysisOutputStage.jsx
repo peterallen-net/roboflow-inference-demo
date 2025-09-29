@@ -376,20 +376,8 @@ const AnalysisOutputStage = () => {
     <div style={styles.container}>
       <h2 style={styles.title}>Analysis Results</h2>
       <p style={styles.description}>
-        Switch between the annotated image and raw JSON.
+        Switch between the annotated image and the object list. Continue to add additional information and report damage.
       </p>
-
-      {/* Detection Summary Cards */}
-      <div style={styles.detectionSummary}>
-        <div style={styles.summaryCard}>
-          <div style={styles.summaryNumber}>{stats.totalObjects}</div>
-          <div style={styles.summaryLabel}>Objects Found</div>
-        </div>
-        <div style={styles.summaryCard}>
-          <div style={styles.summaryNumber}>{stats.avgConfidence}%</div>
-          <div style={styles.summaryLabel}>Avg Confidence</div>
-        </div>
-      </div>
 
       {/* Tabs */}
       <div style={styles.tabContainer}>
@@ -427,6 +415,7 @@ const AnalysisOutputStage = () => {
                   />
                   <div style={styles.imageInfo}>
                     <strong>Analysis Complete:</strong> {workflowData.analysisResult?.detections?.length || 0} objects detected<br/>
+                    <strong>Average Confidence:</strong> {stats.avgConfidence}%<br/>
                     <strong>Model:</strong> {workflowData.analysisResult?.model_version || 'Unknown'}<br/>
                     <strong>Timestamp:</strong> {workflowData.analysisResult?.timestamp ? new Date(workflowData.analysisResult.timestamp).toLocaleString() : 'Unknown'}<br/>
                     {workflowData.analysisResult?.demo_mode && <strong style={{color: '#f59e0b'}}>⚠️ Demo Mode Active</strong>}

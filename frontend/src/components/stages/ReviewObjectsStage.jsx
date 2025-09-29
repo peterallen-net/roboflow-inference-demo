@@ -463,7 +463,7 @@ const ReviewObjectsStage = () => {
                   <textarea
                     value={obj.comments}
                     onChange={(e) => updateObject(obj.id, { comments: e.target.value })}
-                    placeholder="Add any additional notes or observations..."
+                    placeholder="Add additional notes"
                     style={styles.textarea}
                     disabled={obj.exclude}
                   />

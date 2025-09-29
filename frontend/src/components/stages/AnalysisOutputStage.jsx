@@ -291,7 +291,7 @@ const AnalysisOutputStage = () => {
             <div>
               <div style={styles.jsonContainer}>
                 <div style={styles.jsonHeader}>
-                  <div style={styles.jsonTitle}>Raw Analysis Data</div>
+                  <div style={styles.jsonTitle}>Raw JSON Data</div>
                   <button 
                     onClick={copyToClipboard}
                     style={styles.copyButton}

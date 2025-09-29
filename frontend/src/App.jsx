@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import ImageUpload from './components/ImageUpload.jsx'
+import AnalysisWorkflow from './components/AnalysisWorkflow.jsx'
 
 function App() {
   const [showDemo, setShowDemo] = useState(false)
@@ -134,7 +134,7 @@ function App() {
 
       {/* Main Content */}
       {!showDemo ? (
-        <ImageUpload />
+        <AnalysisWorkflow />
       ) : (
         <div style={styles.demoContainer}>
           <div style={styles.demoCard}>

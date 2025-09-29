@@ -9,6 +9,7 @@ const ImageUpload = () => {
   const [annotatedImageUrl, setAnnotatedImageUrl] = useState(null);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [activeTab, setActiveTab] = useState('annotated');
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
@@ -292,6 +293,36 @@ const ImageUpload = () => {
       whiteSpace: 'pre-wrap',
       margin: 0,
     },
+    tabContainer: {
+      marginBottom: '2rem',
+    },
+    tabList: {
+      display: 'flex',
+      borderBottom: '2px solid #e5e7eb',
+      marginBottom: '1.5rem',
+    },
+    tab: {
+      padding: '1rem 1.5rem',
+      fontSize: '1rem',
+      fontWeight: '600',
+      cursor: 'pointer',
+      border: 'none',
+      backgroundColor: 'transparent',
+      color: '#6b7280',
+      borderBottom: '2px solid transparent',
+      transition: 'all 0.3s ease',
+    },
+    activeTab: {
+      color: '#667eea',
+      borderBottomColor: '#667eea',
+      backgroundColor: '#f8fafc',
+    },
+    tabContent: {
+      minHeight: '400px',
+    },
+    fullWidthContainer: {
+      textAlign: 'center',
+    },
   };
 
   const clearAll = () => {
@@ -427,31 +458,67 @@ const ImageUpload = () => {
           </div>
         )}
 
-        {/* Results Section */}
+        {/* Results Section with Tabs */}
         {analysisResult && (
           <div style={styles.card}>
-            <div style={{...styles.resultsContainer, gridTemplateColumns: annotatedImageUrl ? '1fr 1fr' : '1fr'}} className="results-grid">
-              
-              {/* Annotated Image */}
-              {annotatedImageUrl && (
-                <div style={styles.annotatedImageContainer}>
-                  <h3 style={styles.sectionTitle}>Annotated Image</h3>
-                  <img 
-                    src={annotatedImageUrl} 
-                    alt="Annotated result" 
-                    style={styles.annotatedImage}
-                  />
-                </div>
-              )}
+            <div style={styles.tabContainer}>
+              {/* Tab Navigation */}
+              <div style={styles.tabList}>
+                <button
+                  onClick={() => setActiveTab('annotated')}
+                  style={{
+                    ...styles.tab,
+                    ...(activeTab === 'annotated' ? styles.activeTab : {})
+                  }}
+                >
+                  📸 Annotated Image
+                </button>
+                <button
+                  onClick={() => setActiveTab('json')}
+                  style={{
+                    ...styles.tab,
+                    ...(activeTab === 'json' ? styles.activeTab : {})
+                  }}
+                >
+                  📄 JSON Output
+                </button>
+              </div>
 
-              {/* JSON Output */}
-              <div>
-                <h3 style={styles.sectionTitle}>Analysis Results</h3>
-                <div style={styles.jsonContainer}>
-                  <pre style={styles.jsonContent}>
-                    {JSON.stringify(analysisResult, null, 2)}
-                  </pre>
-                </div>
+              {/* Tab Content */}
+              <div style={styles.tabContent}>
+                {activeTab === 'annotated' && (
+                  <div style={styles.fullWidthContainer}>
+                    {annotatedImageUrl ? (
+                      <>
+                        <h3 style={styles.sectionTitle}>Annotated Image</h3>
+                        <img 
+                          src={annotatedImageUrl} 
+                          alt="Annotated result" 
+                          style={styles.annotatedImage}
+                        />
+                      </>
+                    ) : (
+                      <div style={{textAlign: 'center', padding: '2rem', color: '#6b7280'}}>
+                        <div style={{fontSize: '3rem', marginBottom: '1rem'}}>🖼️</div>
+                        <p>No annotated image available</p>
+                        <p style={{fontSize: '0.9rem', marginTop: '0.5rem'}}>
+                          The analysis completed but no annotated image was returned by the model.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {activeTab === 'json' && (
+                  <div>
+                    <h3 style={styles.sectionTitle}>Analysis Results</h3>
+                    <div style={styles.jsonContainer}>
+                      <pre style={styles.jsonContent}>
+                        {JSON.stringify(analysisResult, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

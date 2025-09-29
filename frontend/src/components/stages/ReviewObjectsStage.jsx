@@ -171,6 +171,16 @@ const ReviewObjectsStage = () => {
       alignItems: 'center',
       marginBottom: '1rem',
     },
+    cardHeaderLeft: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '0.25rem',
+    },
+    cardHeaderRight: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.5rem',
+    },
     objectClass: {
       fontSize: '1.2rem',
       fontWeight: '600',
@@ -183,6 +193,35 @@ const ReviewObjectsStage = () => {
       backgroundColor: '#f3f4f6',
       padding: '0.25rem 0.5rem',
       borderRadius: '6px',
+    },
+    iconButton: {
+      padding: '0.25rem',
+      border: 'none',
+      borderRadius: '50%',
+      cursor: 'pointer',
+      fontSize: '1rem',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '2rem',
+      height: '2rem',
+      transition: 'all 0.2s ease',
+    },
+    verifyIconButton: {
+      backgroundColor: '#22c55e',
+      color: 'white',
+    },
+    unverifyIconButton: {
+      backgroundColor: '#6b7280',
+      color: 'white',
+    },
+    excludeIconButton: {
+      backgroundColor: '#ef4444',
+      color: 'white',
+    },
+    includeIconButton: {
+      backgroundColor: '#6b7280',
+      color: 'white',
     },
     highConfidence: {
       backgroundColor: '#dcfce7',
@@ -367,109 +406,166 @@ const ReviewObjectsStage = () => {
               <div style={styles.objectClass}>
                 {obj.class}
               </div>
-              <div style={getConfidenceStyle(obj.confidence)}>
-                {Math.round(obj.confidence * 100)}%
+              <div style={styles.cardHeaderRight}>
+                <div style={getConfidenceStyle(obj.confidence)}>
+                  {Math.round(obj.confidence * 100)}%
+                </div>
+                
+                <button
+                  onClick={() => toggleVerified(obj.id)}
+                  style={{
+                    ...styles.iconButton,
+                    ...(obj.verified ? styles.verifyIconButton : styles.unverifyIconButton)
+                  }}
+                  disabled={obj.exclude}
+                  title={obj.verified ? 'Unverify' : 'Verify'}
+                >
+                  {obj.verified ? '✓' : '?'}
+                </button>
+                
+                <button
+                  onClick={() => toggleExclude(obj.id)}
+                  style={{
+                    ...styles.iconButton,
+                    ...(obj.exclude ? styles.includeIconButton : styles.excludeIconButton)
+                  }}
+                  title={obj.exclude ? 'Include' : 'Exclude'}
+                >
+                  {obj.exclude ? '↻' : '×'}
+                </button>
               </div>
             </div>
 
-            {/* Card Content */}
-            <div style={styles.cardContent}>
-              {/* Handling Code */}
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Handling Code:</label>
-                <select
-                  value={obj.handlingCode}
-                  onChange={(e) => updateObject(obj.id, { handlingCode: e.target.value })}
-                  style={styles.select}
-                  disabled={obj.exclude}
-                >
-                  <option value="">Select Handling Code</option>
-                  {handlingCodes.map((code) => (
-                    <option key={code.value} value={code.value}>
-                      {code.value} - {code.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Report Damage Button */}
-              <div style={styles.formGroup}>
-                <button
-                  onClick={() => {
-                    if (obj.damageType) {
-                      // Clear damage if already set
-                      updateObject(obj.id, { damageType: '', damageLocation: '' });
-                    } else {
-                      // Set a default damage type to show dropdown
-                      updateObject(obj.id, { damageType: 'BE' });
-                    }
-                  }}
-                  style={{
-                    ...styles.actionButton,
-                    backgroundColor: obj.damageType ? '#ef4444' : '#f59e0b',
-                    color: 'white',
-                    width: '100%'
-                  }}
-                  disabled={obj.exclude}
-                >
-                  {obj.damageType ? 'Remove Damage Report' : 'Report Damage'}
-                </button>
-              </div>
-
-              {/* Damage Type Dropdown - Only shown if damage reporting is active */}
-              {obj.damageType && (
+            {/* Card Content - Hidden when excluded for collapsed view */}
+            {!obj.exclude && (
+              <div style={styles.cardContent}>
+                {/* Handling Code */}
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Damage Type:</label>
+                  <label style={styles.label}>Handling Code:</label>
                   <select
-                    value={obj.damageType}
-                    onChange={(e) => updateObject(obj.id, { damageType: e.target.value, damageLocation: '' })}
+                    value={obj.handlingCode}
+                    onChange={(e) => updateObject(obj.id, { handlingCode: e.target.value })}
                     style={styles.select}
                     disabled={obj.exclude}
                   >
-                    {damageCodes.map((code) => (
+                    <option value="">Select Handling Code</option>
+                    {handlingCodes.map((code) => (
                       <option key={code.value} value={code.value}>
                         {code.value} - {code.label}
                       </option>
                     ))}
                   </select>
                 </div>
-              )}
 
-              {/* Damage Location Dropdown - Only shown if damage type is selected */}
-              {obj.damageType && (
+                {/* Comments */}
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Damage Location:</label>
-                  <select
-                    value={obj.damageLocation}
-                    onChange={(e) => updateObject(obj.id, { damageLocation: e.target.value })}
-                    style={styles.select}
+                  <label style={styles.label}>Comments:</label>
+                  <textarea
+                    value={obj.comments}
+                    onChange={(e) => updateObject(obj.id, { comments: e.target.value })}
+                    placeholder="Add any additional notes or observations..."
+                    style={styles.textarea}
                     disabled={obj.exclude}
-                  >
-                    <option value="">Select Location</option>
-                    {damageLocations.map((location) => (
-                      <option key={location.value} value={location.value}>
-                        {location.value} - {location.label}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
-              )}
 
-              {/* Comments */}
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Comments:</label>
-                <textarea
-                  value={obj.comments}
-                  onChange={(e) => updateObject(obj.id, { comments: e.target.value })}
-                  placeholder="Add any additional notes or observations..."
-                  style={styles.textarea}
-                  disabled={obj.exclude}
-                />
+                {/* Report Damage Button - Only shown when no damage is reported */}
+                {!obj.damageType && (
+                  <div style={styles.formGroup}>
+                    <button
+                      onClick={() => {
+                        // Set a default damage type to show dropdown
+                        updateObject(obj.id, { damageType: 'BE' });
+                      }}
+                      style={{
+                        ...styles.actionButton,
+                        backgroundColor: '#f59e0b',
+                        color: 'white',
+                        width: '100%'
+                      }}
+                      disabled={obj.exclude}
+                    >
+                      Report Damage
+                    </button>
+                  </div>
+                )}
+
+                {/* Damage Type Dropdown - Only shown if damage reporting is active */}
+                {obj.damageType && (
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Damage Type:</label>
+                    <select
+                      value={obj.damageType}
+                      onChange={(e) => updateObject(obj.id, { damageType: e.target.value, damageLocation: '' })}
+                      style={styles.select}
+                      disabled={obj.exclude}
+                    >
+                      {damageCodes.map((code) => (
+                        <option key={code.value} value={code.value}>
+                          {code.value} - {code.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Damage Location Dropdown - Only shown if damage type is selected */}
+                {obj.damageType && (
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Damage Location:</label>
+                    <select
+                      value={obj.damageLocation}
+                      onChange={(e) => updateObject(obj.id, { damageLocation: e.target.value })}
+                      style={styles.select}
+                      disabled={obj.exclude}
+                    >
+                      <option value="">Select Location</option>
+                      {damageLocations.map((location) => (
+                        <option key={location.value} value={location.value}>
+                          {location.value} - {location.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Remove Damage Report Button - Only shown when damage is reported */}
+                {obj.damageType && (
+                  <div style={styles.formGroup}>
+                    <button
+                      onClick={() => {
+                        // Clear damage reporting
+                        updateObject(obj.id, { damageType: '', damageLocation: '' });
+                      }}
+                      style={{
+                        ...styles.actionButton,
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        width: '100%'
+                      }}
+                      disabled={obj.exclude}
+                    >
+                      Remove Damage Report
+                    </button>
+                  </div>
+                )}
               </div>
-            </div>
+            )}
 
-            {/* Card Actions */}
-            <div style={styles.cardActions}>
+            {/* Excluded Message - Only shown when excluded */}
+            {obj.exclude && (
+              <div style={{
+                textAlign: 'center',
+                padding: '1rem',
+                color: '#6b7280',
+                fontStyle: 'italic'
+              }}>
+                Item has been excluded from the report
+              </div>
+            )}
+
+            {/* Card Actions - Hidden for now but preserved */}
+            <div style={{...styles.cardActions, display: 'none'}}>
               <button
                 onClick={() => toggleVerified(obj.id)}
                 style={{

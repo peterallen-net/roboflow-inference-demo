@@ -1,6 +1,65 @@
 import { useState, useEffect } from 'react';
 import { useWorkflow } from '../AnalysisWorkflow';
 
+// Handling codes
+const handlingCodes = [
+  { value: 'PBO', label: 'Packed by Owner (Owner\'s Risk)' },
+  { value: 'PBR', label: 'Packed by Removalist' },
+  { value: 'DBO', label: 'Dismantled by Owner' },
+  { value: 'LP', label: 'Left Packed' },
+  { value: 'B&W', label: 'Black & White TV' },
+  { value: 'UR', label: 'Unpacked by Removalist' },
+  { value: 'C', label: 'Colour' },
+];
+
+// Damage codes
+const damageCodes = [
+  { value: 'BE', label: 'Bent' },
+  { value: 'BW', label: 'Badly Worn' },
+  { value: 'BR', label: 'Broken' },
+  { value: 'BU', label: 'Burned' },
+  { value: 'CH', label: 'Chipped' },
+  { value: 'CR', label: 'Cracked' },
+  { value: 'CU', label: 'Condition Unknown' },
+  { value: 'D', label: 'Dented' },
+  { value: 'F', label: 'Faded' },
+  { value: 'G', label: 'Gouged Deeply Dented' },
+  { value: 'L', label: 'Loose' },
+  { value: 'ME', label: 'Moth Eaten' },
+  { value: 'MG', label: 'Missing' },
+  { value: 'ML', label: 'Mildew' },
+  { value: 'NS', label: 'Not Signed' },
+  { value: 'RI', label: 'Ripped' },
+  { value: 'R', label: 'Rubbed' },
+  { value: 'RU', label: 'Rusted' },
+  { value: 'ST', label: 'Stained' },
+  { value: 'SC', label: 'Scratched' },
+  { value: 'SS', label: 'Surface Scratched' },
+  { value: 'SO', label: 'Soiled/Dirty' },
+  { value: 'T', label: 'Torn' },
+  { value: 'WE', label: 'Worm Eaten' },
+  { value: 'WD', label: 'Water Damaged' },
+  { value: '√', label: 'Same (as Previous)' },
+];
+
+// Damage locations
+const damageLocations = [
+  { value: '1', label: 'Bottom' },
+  { value: '2', label: 'Corner' },
+  { value: '3', label: 'Front' },
+  { value: '4', label: 'Left' },
+  { value: '5', label: 'Rear' },
+  { value: '6', label: 'Right' },
+  { value: '7', label: 'Side' },
+  { value: '8', label: 'Top' },
+  { value: '9', label: 'Leg' },
+  { value: '10', label: 'From' },
+  { value: '11', label: 'Arm' },
+  { value: '12', label: 'Edge' },
+  { value: '13', label: 'Veneer' },
+  { value: '14', label: 'Inside' },
+];
+
 const ReviewObjectsStage = () => {
   const { workflowData, updateWorkflowData, prevStage, nextStage } = useWorkflow();
   const [reviewedObjects, setReviewedObjects] = useState([]);
@@ -17,6 +76,9 @@ const ReviewObjectsStage = () => {
         comments: '',
         verified: false,
         exclude: false,
+        handlingCode: '', // New field
+        damageType: '', // New field
+        damageLocation: '', // New field
       }));
       setReviewedObjects(initialObjects);
       updateWorkflowData({ reviewedObjects: initialObjects });
@@ -312,6 +374,87 @@ const ReviewObjectsStage = () => {
 
             {/* Card Content */}
             <div style={styles.cardContent}>
+              {/* Handling Code */}
+              <div style={styles.formGroup}>
+                <label style={styles.label}>Handling Code:</label>
+                <select
+                  value={obj.handlingCode}
+                  onChange={(e) => updateObject(obj.id, { handlingCode: e.target.value })}
+                  style={styles.select}
+                  disabled={obj.exclude}
+                >
+                  <option value="">Select Handling Code</option>
+                  {handlingCodes.map((code) => (
+                    <option key={code.value} value={code.value}>
+                      {code.value} - {code.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Report Damage Button */}
+              <div style={styles.formGroup}>
+                <button
+                  onClick={() => {
+                    if (obj.damageType) {
+                      // Clear damage if already set
+                      updateObject(obj.id, { damageType: '', damageLocation: '' });
+                    } else {
+                      // Set a default damage type to show dropdown
+                      updateObject(obj.id, { damageType: 'BE' });
+                    }
+                  }}
+                  style={{
+                    ...styles.actionButton,
+                    backgroundColor: obj.damageType ? '#ef4444' : '#f59e0b',
+                    color: 'white',
+                    width: '100%'
+                  }}
+                  disabled={obj.exclude}
+                >
+                  {obj.damageType ? 'Remove Damage Report' : 'Report Damage'}
+                </button>
+              </div>
+
+              {/* Damage Type Dropdown - Only shown if damage reporting is active */}
+              {obj.damageType && (
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Damage Type:</label>
+                  <select
+                    value={obj.damageType}
+                    onChange={(e) => updateObject(obj.id, { damageType: e.target.value, damageLocation: '' })}
+                    style={styles.select}
+                    disabled={obj.exclude}
+                  >
+                    {damageCodes.map((code) => (
+                      <option key={code.value} value={code.value}>
+                        {code.value} - {code.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Damage Location Dropdown - Only shown if damage type is selected */}
+              {obj.damageType && (
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Damage Location:</label>
+                  <select
+                    value={obj.damageLocation}
+                    onChange={(e) => updateObject(obj.id, { damageLocation: e.target.value })}
+                    style={styles.select}
+                    disabled={obj.exclude}
+                  >
+                    <option value="">Select Location</option>
+                    {damageLocations.map((location) => (
+                      <option key={location.value} value={location.value}>
+                        {location.value} - {location.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               {/* Comments */}
               <div style={styles.formGroup}>
                 <label style={styles.label}>Comments:</label>

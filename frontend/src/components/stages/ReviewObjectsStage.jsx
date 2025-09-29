@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useWorkflow } from '../AnalysisWorkflow';
 
 const ReviewObjectsStage = () => {
-  const { workflowData, updateWorkflowData } = useWorkflow();
+  const { workflowData, updateWorkflowData, prevStage, nextStage } = useWorkflow();
   const [reviewedObjects, setReviewedObjects] = useState([]);
 
   useEffect(() => {
@@ -207,6 +207,35 @@ const ReviewObjectsStage = () => {
       borderRadius: '6px',
       fontFamily: 'monospace',
     },
+    buttonContainer: {
+      display: 'flex',
+      justifyContent: 'center',
+      gap: '1rem',
+      marginTop: '2rem',
+      flexWrap: 'wrap',
+    },
+    navButton: {
+      padding: '1rem 2rem',
+      border: 'none',
+      borderRadius: '12px',
+      fontWeight: '600',
+      cursor: 'pointer',
+      transition: 'all 0.3s ease',
+      fontSize: '1rem',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.5rem',
+    },
+    backButton: {
+      backgroundColor: '#6b7280',
+      color: 'white',
+      boxShadow: '0 4px 15px 0 rgba(107, 114, 128, 0.3)',
+    },
+    continueButton: {
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      color: 'white',
+      boxShadow: '0 4px 15px 0 rgba(102, 126, 234, 0.3)',
+    },
   };
 
   const getConfidenceStyle = (confidence) => {
@@ -254,8 +283,8 @@ const ReviewObjectsStage = () => {
       {/* Summary Bar */}
       <div style={styles.summaryBar}>
         <div style={styles.summaryItem}>
-          <div style={styles.summaryNumber}>{stats.total}</div>
-          <div style={styles.summaryLabel}>Total Objects</div>
+          <div style={styles.summaryNumber}>{stats.pending}</div>
+          <div style={styles.summaryLabel}>Pending Review</div>
         </div>
         <div style={styles.summaryItem}>
           <div style={styles.summaryNumber}>{stats.verified}</div>
@@ -264,10 +293,6 @@ const ReviewObjectsStage = () => {
         <div style={styles.summaryItem}>
           <div style={styles.summaryNumber}>{stats.excluded}</div>
           <div style={styles.summaryLabel}>Excluded</div>
-        </div>
-        <div style={styles.summaryItem}>
-          <div style={styles.summaryNumber}>{stats.pending}</div>
-          <div style={styles.summaryLabel}>Pending Review</div>
         </div>
       </div>
 
@@ -287,23 +312,6 @@ const ReviewObjectsStage = () => {
 
             {/* Card Content */}
             <div style={styles.cardContent}>
-              {/* Condition */}
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Condition:</label>
-                <select
-                  value={obj.condition}
-                  onChange={(e) => updateObject(obj.id, { condition: e.target.value })}
-                  style={styles.select}
-                  disabled={obj.exclude}
-                >
-                  <option value="Excellent">Excellent</option>
-                  <option value="Good">Good</option>
-                  <option value="Fair">Fair</option>
-                  <option value="Poor">Poor</option>
-                  <option value="Damaged">Damaged</option>
-                </select>
-              </div>
-
               {/* Comments */}
               <div style={styles.formGroup}>
                 <label style={styles.label}>Comments:</label>
@@ -314,12 +322,6 @@ const ReviewObjectsStage = () => {
                   style={styles.textarea}
                   disabled={obj.exclude}
                 />
-              </div>
-
-              {/* Bounding Box Info */}
-              <div style={styles.bboxInfo}>
-                Position: ({obj.bbox.x}, {obj.bbox.y}) • 
-                Size: {obj.bbox.width} × {obj.bbox.height}px
               </div>
             </div>
 
@@ -348,6 +350,29 @@ const ReviewObjectsStage = () => {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Navigation Buttons */}
+      <div style={styles.buttonContainer}>
+        <button
+          onClick={prevStage}
+          style={{
+            ...styles.navButton,
+            ...styles.backButton
+          }}
+        >
+          ← Back
+        </button>
+        
+        <button
+          onClick={nextStage}
+          style={{
+            ...styles.navButton,
+            ...styles.continueButton
+          }}
+        >
+          Continue →
+        </button>
       </div>
     </div>
   );

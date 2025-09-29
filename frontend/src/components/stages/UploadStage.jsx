@@ -340,6 +340,16 @@ const UploadStage = () => {
         )}
 
         <div style={styles.buttonContainer}>
+          {workflowData.selectedFile && (
+            <button
+              onClick={clearFile}
+              style={styles.clearButton}
+              disabled={isLoading}
+            >
+              Clear
+            </button>
+          )}
+          
           <button
             onClick={handleAnalyze}
             disabled={!workflowData.selectedFile || isLoading}
@@ -352,16 +362,6 @@ const UploadStage = () => {
             {isLoading && <span style={styles.loadingSpinner}></span>}
             {isLoading ? 'Analysing...' : 'Submit'}
           </button>
-          
-          {workflowData.selectedFile && (
-            <button
-              onClick={clearFile}
-              style={styles.clearButton}
-              disabled={isLoading}
-            >
-              Clear
-            </button>
-          )}
         </div>
       </div>
     </>

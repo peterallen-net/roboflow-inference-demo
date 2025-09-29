@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useWorkflow } from '../AnalysisWorkflow';
 
 const AnalysisOutputStage = () => {
-  const { workflowData } = useWorkflow();
+  const { workflowData, goToStage } = useWorkflow();
   const [activeTab, setActiveTab] = useState('annotated');
 
   const styles = {
@@ -155,6 +155,35 @@ const AnalysisOutputStage = () => {
       fontWeight: '600',
       letterSpacing: '0.5px',
     },
+    buttonContainer: {
+      display: 'flex',
+      justifyContent: 'center',
+      gap: '1rem',
+      marginTop: '2rem',
+      flexWrap: 'wrap',
+    },
+    actionButton: {
+      padding: '1rem 2rem',
+      border: 'none',
+      borderRadius: '12px',
+      fontWeight: '600',
+      cursor: 'pointer',
+      transition: 'all 0.3s ease',
+      fontSize: '1rem',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.5rem',
+    },
+    uploadNewButton: {
+      backgroundColor: '#6b7280',
+      color: 'white',
+      boxShadow: '0 4px 15px 0 rgba(107, 114, 128, 0.3)',
+    },
+    reviewItemsButton: {
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      color: 'white',
+      boxShadow: '0 4px 15px 0 rgba(102, 126, 234, 0.3)',
+    },
   };
 
   const copyToClipboard = async () => {
@@ -170,20 +199,17 @@ const AnalysisOutputStage = () => {
     if (!workflowData.analysisResult?.detections) {
       return {
         totalObjects: 0,
-        avgConfidence: 0,
-        processingTime: workflowData.analysisResult?.processing_time || 0
+        avgConfidence: 0
       };
     }
 
     const detections = workflowData.analysisResult.detections;
     const totalObjects = detections.length;
     const avgConfidence = detections.reduce((sum, det) => sum + det.confidence, 0) / totalObjects;
-    const processingTime = workflowData.analysisResult.processing_time || 0;
 
     return {
       totalObjects,
-      avgConfidence: Math.round(avgConfidence * 100),
-      processingTime: Math.round(processingTime * 100) / 100
+      avgConfidence: Math.round(avgConfidence * 100)
     };
   };
 
@@ -205,10 +231,6 @@ const AnalysisOutputStage = () => {
         <div style={styles.summaryCard}>
           <div style={styles.summaryNumber}>{stats.avgConfidence}%</div>
           <div style={styles.summaryLabel}>Avg Confidence</div>
-        </div>
-        <div style={styles.summaryCard}>
-          <div style={styles.summaryNumber}>{stats.processingTime}s</div>
-          <div style={styles.summaryLabel}>Processing Time</div>
         </div>
       </div>
 
@@ -285,6 +307,29 @@ const AnalysisOutputStage = () => {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Navigation Buttons */}
+      <div style={styles.buttonContainer}>
+        <button
+          onClick={() => goToStage(0)}
+          style={{
+            ...styles.actionButton,
+            ...styles.uploadNewButton
+          }}
+        >
+          Upload New Image
+        </button>
+        
+        <button
+          onClick={() => goToStage(2)}
+          style={{
+            ...styles.actionButton,
+            ...styles.reviewItemsButton
+          }}
+        >
+          Review Items
+        </button>
       </div>
     </div>
   );

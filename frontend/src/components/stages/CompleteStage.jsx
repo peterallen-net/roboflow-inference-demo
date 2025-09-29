@@ -21,15 +21,44 @@ const CompleteStage = () => {
     URL.revokeObjectURL(url);
   };
 
-  const downloadJSON = () => {
+  const downloadCSV = () => {
     if (!workflowData.finalReport) return;
 
-    const dataStr = JSON.stringify(workflowData.finalReport, null, 2);
-    const blob = new Blob([dataStr], { type: 'application/json' });
+    const report = workflowData.finalReport;
+    
+    // Create CSV headers
+    const headers = [
+      'ID',
+      'Class',
+      'Confidence (%)',
+      'Comments',
+      'Verified',
+      'Position',
+      'Size'
+    ];
+    
+    // Create CSV rows
+    const rows = report.objects.map(obj => [
+      obj.id,
+      obj.class,
+      obj.confidence,
+      `"${obj.comments || 'None'}"`, // Wrap in quotes to handle commas
+      obj.verified ? 'Yes' : 'No',
+      obj.position,
+      obj.size
+    ]);
+    
+    // Combine headers and rows
+    const csvContent = [headers, ...rows]
+      .map(row => row.join(','))
+      .join('\n');
+    
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Analysis_Report_${workflowData.finalReport.id}.json`;
+    link.download = `Analysis_Report_${report.id}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -326,10 +355,10 @@ const CompleteStage = () => {
       color: 'white',
       boxShadow: '0 4px 15px 0 rgba(5, 150, 105, 0.3)',
     },
-    downloadJSONButton: {
-      background: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)',
+    downloadCSVButton: {
+      background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
       color: 'white',
-      boxShadow: '0 4px 15px 0 rgba(124, 58, 237, 0.3)',
+      boxShadow: '0 4px 15px 0 rgba(245, 158, 11, 0.3)',
     },
     restartButton: {
       backgroundColor: '#6b7280',
@@ -344,6 +373,7 @@ const CompleteStage = () => {
       textAlign: 'left',
       maxHeight: '400px',
       overflow: 'auto',
+      display: 'none', // Hidden for now
     },
     previewTitle: {
       fontSize: '1.2rem',
@@ -408,49 +438,41 @@ const CompleteStage = () => {
             box-shadow: 0 8px 25px 0 rgba(5, 150, 105, 0.4);
           }
           
-          .download-json-button:hover {
+          .download-csv-button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px 0 rgba(124, 58, 237, 0.4);
+            box-shadow: 0 8px 25px 0 rgba(245, 158, 11, 0.4);
           }
         `}
       </style>
       
       <div style={styles.container}>
         <h2 style={styles.title}>
-          Report Generated Successfully
+          Inventory Complete!
         </h2>
         
         <p style={styles.description}>
-          Your AI image analysis is complete! Review the summary below and download your final report.
+          Your inventory has been completed. Review the summary and download your final report.
         </p>
 
         {/* Report Summary */}
         <div style={styles.reportSummary}>
-          <h3 style={styles.summaryTitle}>📊 Final Report Summary</h3>
+          <h3 style={styles.summaryTitle}>Report Summary</h3>
           <div style={styles.summaryGrid}>
             <div style={styles.summaryItem}>
               <span><strong>Report ID:</strong></span>
               <span>{report.id}</span>
             </div>
             <div style={styles.summaryItem}>
-              <span><strong>Objects Analysed:</strong></span>
-              <span>{report.analysis.objectsIncluded}</span>
+              <span><strong>Created Date:</strong></span>
+              <span>{new Date(report.timestamp).toLocaleDateString()}</span>
             </div>
             <div style={styles.summaryItem}>
               <span><strong>Objects Verified:</strong></span>
               <span>{report.summary.totalVerified}</span>
             </div>
             <div style={styles.summaryItem}>
-              <span><strong>Processing Time:</strong></span>
-              <span>{report.analysis.processingTime}s</span>
-            </div>
-            <div style={styles.summaryItem}>
               <span><strong>Signature Type:</strong></span>
               <span style={{ textTransform: 'capitalize' }}>{report.signature.type}</span>
-            </div>
-            <div style={styles.summaryItem}>
-              <span><strong>Generated:</strong></span>
-              <span>{new Date(report.timestamp).toLocaleDateString()}</span>
             </div>
           </div>
         </div>
@@ -462,15 +484,15 @@ const CompleteStage = () => {
             style={{ ...styles.actionButton, ...styles.downloadButton }}
             className="download-button"
           >
-            Download Report (HTML)
+            Download Report
           </button>
           
           <button
-            onClick={downloadJSON}
-            style={{ ...styles.actionButton, ...styles.downloadJSONButton }}
-            className="download-json-button"
+            onClick={downloadCSV}
+            style={{ ...styles.actionButton, ...styles.downloadCSVButton }}
+            className="download-csv-button"
           >
-            Download Data (JSON)
+            Export CSV
           </button>
           
           <button

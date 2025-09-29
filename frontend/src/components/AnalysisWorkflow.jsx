@@ -132,47 +132,6 @@ const AnalysisWorkflow = () => {
       color: '#6b7280',
       marginBottom: '2rem',
     },
-    progressContainer: {
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginBottom: '3rem',
-      flexWrap: 'wrap',
-      gap: '0.5rem',
-    },
-    progressStep: {
-      display: 'flex',
-      alignItems: 'center',
-      padding: '0.5rem 1rem',
-      borderRadius: '25px',
-      fontSize: '0.9rem',
-      fontWeight: '600',
-      transition: 'all 0.3s ease',
-    },
-    activeStep: {
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      color: 'white',
-      boxShadow: '0 4px 15px 0 rgba(102, 126, 234, 0.3)',
-    },
-    completedStep: {
-      backgroundColor: '#d1fae5',
-      color: '#065f46',
-      border: '1px solid #a7f3d0',
-    },
-    inactiveStep: {
-      backgroundColor: '#f3f4f6',
-      color: '#6b7280',
-      border: '1px solid #d1d5db',
-    },
-    progressConnector: {
-      width: '2rem',
-      height: '2px',
-      backgroundColor: '#d1d5db',
-      margin: '0 0.5rem',
-    },
-    activeConnector: {
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    },
     stageContainer: {
       backgroundColor: 'white',
       borderRadius: '16px',
@@ -227,33 +186,6 @@ const AnalysisWorkflow = () => {
           <p style={styles.subtitle}>
             Complete analysis workflow from upload to final report
           </p>
-        </div>
-
-        {/* Progress Indicator */}
-        <div style={styles.progressContainer}>
-          {stages.map((stage, index) => (
-            <div key={stage.id}>
-              <div
-                style={{
-                  ...styles.progressStep,
-                  ...(index === currentStage ? styles.activeStep : 
-                      index < currentStage ? styles.completedStep : 
-                      styles.inactiveStep)
-                }}
-              >
-                <span style={{ marginRight: '0.5rem' }}>{stage.icon}</span>
-                {stage.name}
-              </div>
-              {index < stages.length - 1 && (
-                <div 
-                  style={{
-                    ...styles.progressConnector,
-                    ...(index < currentStage ? styles.activeConnector : {})
-                  }}
-                />
-              )}
-            </div>
-          ))}
         </div>
 
         {/* Current Stage Content */}

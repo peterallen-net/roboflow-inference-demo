@@ -480,7 +480,7 @@ const ImageUpload = () => {
                     ...(activeTab === 'json' ? styles.activeTab : {})
                   }}
                 >
-                  📄 JSON Output
+                  📄 Raw JSON
                 </button>
               </div>
 

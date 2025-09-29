@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useWorkflow } from '../AnalysisWorkflow';
 
 const FinaliseStage = () => {
-  const { workflowData, updateWorkflowData } = useWorkflow();
+  const { workflowData, updateWorkflowData, nextStage, prevStage } = useWorkflow();
   const [signatureMode, setSignatureMode] = useState('digital'); // 'digital' or 'text'
   const [textSignature, setTextSignature] = useState('');
   const [isDrawing, setIsDrawing] = useState(false);
@@ -108,6 +108,7 @@ const FinaliseStage = () => {
     };
 
     updateWorkflowData({ finalReport: report });
+    nextStage(); // Navigate to the next stage after generating the report
   };
 
   const styles = {
@@ -245,6 +246,21 @@ const FinaliseStage = () => {
       borderRadius: '8px',
       border: '1px solid #e2e8f0',
     },
+    buttonContainer: {
+      display: 'flex',
+      justifyContent: 'center',
+      gap: '1rem',
+      marginTop: '2rem',
+      flexWrap: 'wrap',
+    },
+    backButton: {
+      backgroundColor: '#6b7280',
+      color: 'white',
+      fontSize: '1rem',
+      padding: '0.75rem 1.5rem',
+      boxShadow: '0 4px 15px 0 rgba(107, 114, 128, 0.3)',
+      borderRadius: '8px',
+    },
   };
 
   const getSummaryData = () => {
@@ -253,8 +269,6 @@ const FinaliseStage = () => {
       'Total Objects Detected': workflowData.analysisResult?.detections?.length || 0,
       'Objects Included': includedObjects.length,
       'Objects Verified': includedObjects.filter(obj => obj.verified).length,
-      'Processing Time': `${workflowData.analysisResult?.processing_time || 0}s`,
-      'Model Version': workflowData.analysisResult?.model_version || 'Unknown',
       'Analysis Date': new Date().toLocaleDateString(),
     };
   };
@@ -377,44 +391,34 @@ const FinaliseStage = () => {
                 Signed on: {new Date(workflowData.signature.timestamp).toLocaleString()}
               </div>
             </div>
-            
-            {/* Certification */}
-            <div style={{
-              marginTop: '1.5rem',
-              padding: '1.5rem',
-              backgroundColor: '#f8fafc',
-              borderRadius: '8px',
-              border: '1px solid #e2e8f0',
-              textAlign: 'left',
-              fontSize: '0.9rem',
-              lineHeight: '1.6',
-              color: '#374151'
-            }}>
-              <h4 style={{ margin: '0 0 1rem 0', fontWeight: '600', color: '#374151' }}>Certification</h4>
-              <p style={{ margin: '0 0 1rem 0' }}>By providing your digital signature above, you certify that:</p>
-              <ul style={{ margin: '0', paddingLeft: '1.5rem' }}>
-                <li style={{ marginBottom: '0.5rem' }}>The inventory information listed above is accurate to the best of your knowledge</li>
-                <li style={{ marginBottom: '0.5rem' }}>All items have been properly identified and their conditions noted</li>
-                <li style={{ marginBottom: '0.5rem' }}>You have the authority to certify this inventory on behalf of your organization</li>
-                <li style={{ marginBottom: '0' }}>This digital signature has the same legal effect as a handwritten signature</li>
-              </ul>
-            </div>
           </>
         )}
       </div>
 
-      {/* Generate Report Button */}
-      <button
-        onClick={generateFinalReport}
-        disabled={!hasSignature}
-        style={{
-          ...styles.actionButton,
-          ...styles.generateButton,
-          ...((!hasSignature) ? styles.disabledButton : {})
-        }}
-      >
-        {hasSignature ? 'Generate Report' : 'Signature Required'}
-      </button>
+      {/* Navigation Buttons */}
+      <div style={styles.buttonContainer}>
+        <button
+          onClick={prevStage}
+          style={{
+            ...styles.actionButton,
+            ...styles.backButton
+          }}
+        >
+          ← Back
+        </button>
+        
+        <button
+          onClick={generateFinalReport}
+          disabled={!hasSignature}
+          style={{
+            ...styles.actionButton,
+            ...styles.generateButton,
+            ...((!hasSignature) ? styles.disabledButton : {})
+          }}
+        >
+          {hasSignature ? 'Generate Report' : 'Signature Required'}
+        </button>
+      </div>
     </div>
   );
 };

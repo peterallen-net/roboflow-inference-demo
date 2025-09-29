@@ -223,7 +223,7 @@ const AnalysisWorkflow = () => {
       <div style={styles.container}>
         {/* Header */}
         <div style={styles.header}>
-          <h1 style={styles.title}>AI Image Analysis Workflow</h1>
+          <h1 style={styles.title}>AI Image Analysis</h1>
           <p style={styles.subtitle}>
             Complete analysis workflow from upload to final report
           </p>

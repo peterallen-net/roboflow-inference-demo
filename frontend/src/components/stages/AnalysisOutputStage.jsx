@@ -193,7 +193,7 @@ const AnalysisOutputStage = () => {
     <div style={styles.container}>
       <h2 style={styles.title}>Analysis Results</h2>
       <p style={styles.description}>
-        Review the AI analysis output below. You can switch between the annotated image and detailed JSON results.
+        You can switch between the annotated image and raw JSON output.
       </p>
 
       {/* Detection Summary Cards */}

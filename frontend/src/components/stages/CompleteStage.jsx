@@ -416,15 +416,7 @@ const CompleteStage = () => {
       </style>
       
       <div style={styles.container}>
-        <div style={styles.successIcon}>🎉</div>
-        
-        <div style={styles.completionBadge}>
-          <span>✅</span>
-          <span>Analysis Complete!</span>
-        </div>
-
         <h2 style={styles.title}>
-          <span>📄</span>
           Report Generated Successfully
         </h2>
         
@@ -441,7 +433,7 @@ const CompleteStage = () => {
               <span>{report.id}</span>
             </div>
             <div style={styles.summaryItem}>
-              <span><strong>Objects Analyzed:</strong></span>
+              <span><strong>Objects Analysed:</strong></span>
               <span>{report.analysis.objectsIncluded}</span>
             </div>
             <div style={styles.summaryItem}>
@@ -470,7 +462,6 @@ const CompleteStage = () => {
             style={{ ...styles.actionButton, ...styles.downloadButton }}
             className="download-button"
           >
-            <span>📄</span>
             Download Report (HTML)
           </button>
           
@@ -479,7 +470,6 @@ const CompleteStage = () => {
             style={{ ...styles.actionButton, ...styles.downloadJSONButton }}
             className="download-json-button"
           >
-            <span>📊</span>
             Download Data (JSON)
           </button>
           
@@ -487,7 +477,6 @@ const CompleteStage = () => {
             onClick={resetWorkflow}
             style={{ ...styles.actionButton, ...styles.restartButton }}
           >
-            <span>🔄</span>
             Start New Analysis
           </button>
         </div>

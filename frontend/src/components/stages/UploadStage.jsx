@@ -290,32 +290,33 @@ const UploadStage = () => {
       <div style={styles.container}>
         <h2 style={styles.title}>Upload Your Image</h2>
         <p style={styles.description}>
-          Select an image file to begin the AI analysis workflow. 
           Supported formats: JPG, PNG, GIF (up to 10MB)
         </p>
 
-        <div style={styles.fileInputContainer}>
-          <input
-            type="file"
-            id="workflow-image-upload"
-            accept="image/*"
-            onChange={handleFileChange}
-            style={styles.fileInput}
-          />
-          <label 
-            htmlFor="workflow-image-upload" 
-            style={styles.fileInputLabel}
-            className="upload-label"
-          >
-            <div style={styles.uploadIcon}>📤</div>
-            <div style={styles.uploadText}>
-              Choose Image File
-            </div>
-            <div style={styles.uploadSubtext}>
-              or drag and drop here
-            </div>
-          </label>
-        </div>
+        {!workflowData.previewUrl && (
+          <div style={styles.fileInputContainer}>
+            <input
+              type="file"
+              id="workflow-image-upload"
+              accept="image/*"
+              onChange={handleFileChange}
+              style={styles.fileInput}
+            />
+            <label 
+              htmlFor="workflow-image-upload" 
+              style={styles.fileInputLabel}
+              className="upload-label"
+            >
+              <div style={styles.uploadIcon}>📤</div>
+              <div style={styles.uploadText}>
+                Choose Image File
+              </div>
+              <div style={styles.uploadSubtext}>
+                or drag and drop here
+              </div>
+            </label>
+          </div>
+        )}
 
         {workflowData.previewUrl && (
           <div style={styles.previewContainer}>
@@ -349,7 +350,7 @@ const UploadStage = () => {
             className="analyze-button"
           >
             {isLoading && <span style={styles.loadingSpinner}></span>}
-            {isLoading ? 'Analyzing...' : '🔍 Analyze Image'}
+            {isLoading ? 'Analysing...' : 'Submit'}
           </button>
           
           {workflowData.selectedFile && (
@@ -358,7 +359,7 @@ const UploadStage = () => {
               style={styles.clearButton}
               disabled={isLoading}
             >
-              🗑️ Clear
+              Clear
             </button>
           )}
         </div>

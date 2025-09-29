@@ -430,7 +430,7 @@ const ImageUpload = () => {
               className="submit-button"
             >
               {isLoading && <span style={styles.loadingSpinner}></span>}
-              {isLoading ? 'Analyzing...' : 'Analyze Image'}
+              {isLoading ? 'Analysing...' : 'Analyze Image'}
             </button>
             
             {selectedFile && (

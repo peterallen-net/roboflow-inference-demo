@@ -271,7 +271,7 @@ const FinaliseStage = () => {
 
       {/* Summary Card */}
       <div style={styles.summaryCard}>
-        <h3 style={styles.summaryTitle}>📋 Analysis Summary</h3>
+        <h3 style={styles.summaryTitle}>Summary</h3>
         <div style={styles.summaryGrid}>
           {Object.entries(summaryData).map(([key, value]) => (
             <div key={key} style={styles.summaryItem}>
@@ -298,7 +298,7 @@ const FinaliseStage = () => {
 
       {/* Signature Section */}
       <div style={styles.signatureSection}>
-        <h3 style={styles.signatureTitle}>✍️ Signature Required</h3>
+        <h3 style={styles.signatureTitle}>Signature Required</h3>
         
         {/* Mode Selector */}
         <div style={styles.modeSelector}>
@@ -357,25 +357,49 @@ const FinaliseStage = () => {
             onClick={clearSignature}
             style={{ ...styles.actionButton, ...styles.clearButton }}
           >
-            🗑️ Clear
+            Clear
           </button>
         </div>
 
         {/* Signature Preview */}
         {hasSignature && (
-          <div style={styles.signaturePreview}>
-            <strong>Signature Preview:</strong><br/>
-            {workflowData.signature.type === 'digital' ? (
-              <img src={workflowData.signature.data} alt="Digital signature" style={{ maxWidth: '200px', height: 'auto' }} />
-            ) : (
-              <span style={{ fontFamily: 'cursive', fontSize: '1.2rem' }}>
-                {workflowData.signature.data}
-              </span>
-            )}
-            <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.5rem' }}>
-              Signed on: {new Date(workflowData.signature.timestamp).toLocaleString()}
+          <>
+            <div style={styles.signaturePreview}>
+              <strong>Signature Preview:</strong><br/>
+              {workflowData.signature.type === 'digital' ? (
+                <img src={workflowData.signature.data} alt="Digital signature" style={{ maxWidth: '200px', height: 'auto' }} />
+              ) : (
+                <span style={{ fontFamily: 'cursive', fontSize: '1.2rem' }}>
+                  {workflowData.signature.data}
+                </span>
+              )}
+              <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.5rem' }}>
+                Signed on: {new Date(workflowData.signature.timestamp).toLocaleString()}
+              </div>
             </div>
-          </div>
+            
+            {/* Certification */}
+            <div style={{
+              marginTop: '1.5rem',
+              padding: '1.5rem',
+              backgroundColor: '#f8fafc',
+              borderRadius: '8px',
+              border: '1px solid #e2e8f0',
+              textAlign: 'left',
+              fontSize: '0.9rem',
+              lineHeight: '1.6',
+              color: '#374151'
+            }}>
+              <h4 style={{ margin: '0 0 1rem 0', fontWeight: '600', color: '#374151' }}>Certification</h4>
+              <p style={{ margin: '0 0 1rem 0' }}>By providing your digital signature above, you certify that:</p>
+              <ul style={{ margin: '0', paddingLeft: '1.5rem' }}>
+                <li style={{ marginBottom: '0.5rem' }}>The inventory information listed above is accurate to the best of your knowledge</li>
+                <li style={{ marginBottom: '0.5rem' }}>All items have been properly identified and their conditions noted</li>
+                <li style={{ marginBottom: '0.5rem' }}>You have the authority to certify this inventory on behalf of your organization</li>
+                <li style={{ marginBottom: '0' }}>This digital signature has the same legal effect as a handwritten signature</li>
+              </ul>
+            </div>
+          </>
         )}
       </div>
 
@@ -389,7 +413,7 @@ const FinaliseStage = () => {
           ...((!hasSignature) ? styles.disabledButton : {})
         }}
       >
-        {hasSignature ? '📄 Generate Final Report' : '⚠️ Signature Required'}
+        {hasSignature ? 'Generate Report' : 'Signature Required'}
       </button>
     </div>
   );

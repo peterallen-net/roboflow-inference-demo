@@ -248,7 +248,7 @@ const ReviewObjectsStage = () => {
     <div style={styles.container}>
       <h2 style={styles.title}>Review Detected Objects</h2>
       <p style={styles.description}>
-        Review each detected object below. Add conditions, comments, and verify or exclude objects as needed.
+        Add conditions, comments, and verify or exclude objects as needed.
       </p>
 
       {/* Summary Bar */}

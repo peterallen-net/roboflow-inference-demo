@@ -401,7 +401,7 @@ const AnalysisOutputStage = () => {
               ...(activeTab === 'annotated' ? styles.activeTab : {})
             }}
           >
-          Annotated Image
+          Image
           </button>
           <button
             onClick={() => setActiveTab('objectlist')}
@@ -410,16 +410,7 @@ const AnalysisOutputStage = () => {
               ...(activeTab === 'objectlist' ? styles.activeTab : {})
             }}
           >
-            Object List
-          </button>
-          <button
-            onClick={() => setActiveTab('json')}
-            style={{
-              ...styles.tab,
-              ...(activeTab === 'json' ? styles.activeTab : {})
-            }}
-          >
-            Raw JSON
+            List
           </button>
         </div>
 
@@ -460,7 +451,7 @@ const AnalysisOutputStage = () => {
                   <thead style={styles.tableHeader}>
                     <tr>
                       <th style={styles.tableHeaderCell}>Object</th>
-                      <th style={styles.tableHeaderCell}>Confidence</th>
+                      <th style={styles.tableHeaderCell}>%</th>
                       <th style={styles.tableHeaderCell}>Quantity</th>
                       <th style={styles.tableHeaderCell}>Actions</th>
                     </tr>

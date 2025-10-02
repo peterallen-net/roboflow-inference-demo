@@ -5,6 +5,13 @@ const AnalysisOutputStage = () => {
   const { workflowData, goToStage, updateWorkflowData } = useWorkflow();
   const [activeTab, setActiveTab] = useState('annotated');
   const [objectQuantities, setObjectQuantities] = useState({});
+  const [showAddItemModal, setShowAddItemModal] = useState(false);
+  const [newItem, setNewItem] = useState({
+    name: '',
+    quantity: 1,
+    confidence: 100,
+  });
+  const [manualItems, setManualItems] = useState([]);
 
   const styles = {
     container: {
@@ -281,6 +288,111 @@ const AnalysisOutputStage = () => {
       backgroundColor: '#ef4444',
       color: 'white',
     },
+    addItemButton: {
+      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+      color: 'white',
+      padding: '0.75rem 1.5rem',
+      border: 'none',
+      borderRadius: '8px',
+      fontWeight: '600',
+      cursor: 'pointer',
+      transition: 'all 0.3s ease',
+      fontSize: '0.95rem',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.5rem',
+      boxShadow: '0 4px 15px 0 rgba(16, 185, 129, 0.3)',
+      marginBottom: '1rem',
+    },
+    modalOverlay: {
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000,
+    },
+    modalContent: {
+      backgroundColor: 'white',
+      borderRadius: '16px',
+      padding: '2rem',
+      maxWidth: '500px',
+      width: '90%',
+      maxHeight: '80vh',
+      overflow: 'auto',
+      boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+    },
+    modalTitle: {
+      fontSize: '1.5rem',
+      fontWeight: '600',
+      marginBottom: '1rem',
+      color: '#374151',
+    },
+    modalDescription: {
+      fontSize: '0.95rem',
+      color: '#6b7280',
+      marginBottom: '1.5rem',
+      lineHeight: '1.5',
+    },
+    inputGroup: {
+      marginBottom: '1.5rem',
+    },
+    label: {
+      display: 'block',
+      fontSize: '0.9rem',
+      fontWeight: '600',
+      marginBottom: '0.5rem',
+      color: '#374151',
+    },
+    input: {
+      width: '100%',
+      padding: '0.75rem',
+      border: '2px solid #e5e7eb',
+      borderRadius: '8px',
+      fontSize: '1rem',
+      boxSizing: 'border-box',
+      transition: 'border-color 0.3s ease',
+    },
+    modalActions: {
+      display: 'flex',
+      gap: '1rem',
+      justifyContent: 'flex-end',
+      marginTop: '2rem',
+    },
+    cancelButton: {
+      padding: '0.75rem 1.5rem',
+      border: '2px solid #e5e7eb',
+      borderRadius: '8px',
+      backgroundColor: 'white',
+      color: '#6b7280',
+      fontWeight: '600',
+      cursor: 'pointer',
+      transition: 'all 0.3s ease',
+    },
+    submitButton: {
+      padding: '0.75rem 1.5rem',
+      border: 'none',
+      borderRadius: '8px',
+      backgroundColor: '#10b981',
+      color: 'white',
+      fontWeight: '600',
+      cursor: 'pointer',
+      transition: 'all 0.3s ease',
+    },
+    manualBadge: {
+      fontSize: '0.7rem',
+      backgroundColor: '#10b981',
+      color: 'white',
+      padding: '0.2rem 0.5rem',
+      borderRadius: '4px',
+      marginLeft: '0.5rem',
+      fontWeight: '600',
+      textTransform: 'uppercase',
+    },
   };
 
   const copyToClipboard = async () => {
@@ -294,29 +406,42 @@ const AnalysisOutputStage = () => {
 
   // Group objects by class and calculate average confidence
   const getObjectList = () => {
-    if (!workflowData.analysisResult?.detections) return [];
+    const detectedObjects = [];
+    
+    if (workflowData.analysisResult?.detections) {
+      const grouped = {};
+      workflowData.analysisResult.detections.forEach(detection => {
+        const className = detection.class;
+        if (!grouped[className]) {
+          grouped[className] = {
+            name: className,
+            count: 0,
+            totalConfidence: 0,
+          };
+        }
+        grouped[className].count += 1;
+        grouped[className].totalConfidence += detection.confidence;
+      });
 
-    const grouped = {};
-    workflowData.analysisResult.detections.forEach(detection => {
-      const className = detection.class;
-      if (!grouped[className]) {
-        grouped[className] = {
-          name: className,
-          count: 0,
-          totalConfidence: 0,
-        };
-      }
-      grouped[className].count += 1;
-      grouped[className].totalConfidence += detection.confidence;
-    });
+      detectedObjects.push(...Object.values(grouped)
+        .filter(group => objectQuantities[group.name] !== 0) // Hide objects with 0 quantity
+        .map(group => ({
+          name: group.name,
+          confidence: Math.round((group.totalConfidence / group.count) * 100),
+          quantity: objectQuantities[group.name] || group.count, // Use custom quantity or detected count
+          isManual: false,
+        })));
+    }
 
-    return Object.values(grouped)
-      .filter(group => objectQuantities[group.name] !== 0) // Hide objects with 0 quantity
-      .map(group => ({
-        name: group.name,
-        confidence: Math.round((group.totalConfidence / group.count) * 100),
-        quantity: objectQuantities[group.name] || group.count, // Use custom quantity or detected count
+    // Add manual items that haven't been deleted, using updated quantities
+    const activeManualItems = manualItems
+      .filter(item => objectQuantities[item.name] !== 0)
+      .map(item => ({
+        ...item,
+        quantity: objectQuantities[item.name] || item.quantity, // Use updated quantity if exists
       }));
+    
+    return [...detectedObjects, ...activeManualItems];
   };
 
   const updateQuantity = (objectName, change) => {
@@ -335,6 +460,25 @@ const AnalysisOutputStage = () => {
       ...prev,
       [objectName]: 0
     }));
+    // Also remove from manual items if it exists
+    setManualItems(prev => prev.filter(item => item.name !== objectName));
+  };
+
+  const addNewItem = () => {
+    if (!newItem.name.trim()) return;
+
+    const newManualItem = {
+      name: newItem.name.trim(),
+      confidence: newItem.confidence,
+      quantity: newItem.quantity,
+      isManual: true,
+    };
+
+    setManualItems(prev => [...prev, newManualItem]);
+    
+    // Reset form and close modal
+    setNewItem({ name: '', quantity: 1, confidence: 100 });
+    setShowAddItemModal(false);
   };
 
   const getConfidenceBadgeStyle = (confidence) => {
@@ -454,7 +598,12 @@ const AnalysisOutputStage = () => {
                         onMouseLeave={(e) => e.target.parentElement.style.backgroundColor = 'transparent'}
                       >
                         <td style={styles.tableCell}>
-                          <span style={styles.objectName}>{obj.name}</span>
+                          <span style={styles.objectName}>
+                            {obj.name}
+                            {obj.isManual && (
+                              <span style={styles.manualBadge}>M</span>
+                            )}
+                          </span>
                         </td>
                         <td style={styles.tableCell}>
                           <span style={getConfidenceBadgeStyle(obj.confidence)}>
@@ -519,6 +668,21 @@ const AnalysisOutputStage = () => {
                   </tbody>
                 </table>
               </div>
+              
+              <button
+                onClick={() => setShowAddItemModal(true)}
+                style={{...styles.addItemButton, marginTop: '1rem', marginBottom: '0'}}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'translateY(-2px)';
+                  e.target.style.boxShadow = '0 8px 25px 0 rgba(16, 185, 129, 0.4)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = '0 4px 15px 0 rgba(16, 185, 129, 0.3)';
+                }}
+              >
+                ➕ Add Item
+              </button>
             </div>
           )}
 
@@ -543,6 +707,91 @@ const AnalysisOutputStage = () => {
           )}
         </div>
       </div>
+
+      {/* Add Item Modal */}
+      {showAddItemModal && (
+        <div style={styles.modalOverlay} onClick={() => setShowAddItemModal(false)}>
+          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <h3 style={styles.modalTitle}>➕ Add New Item</h3>
+            <p style={styles.modalDescription}>
+              Manually add an item to your inventory list. Enter the item details below.
+            </p>
+
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Item Name *</label>
+              <input
+                type="text"
+                value={newItem.name}
+                onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+                placeholder="e.g., Dining Chair, Bookshelf, etc."
+                style={styles.input}
+              />
+            </div>
+
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Quantity</label>
+              <div style={{...styles.quantityControls, justifyContent: 'center', marginTop: '0.5rem'}}>
+                <button
+                  onClick={() => setNewItem({ ...newItem, quantity: Math.max(1, newItem.quantity - 1) })}
+                  style={styles.quantityButton}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = '#f3f4f6';
+                    e.target.style.borderColor = '#9ca3af';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = '#ffffff';
+                    e.target.style.borderColor = '#d1d5db';
+                  }}
+                  disabled={newItem.quantity <= 1}
+                >
+                  −
+                </button>
+                <span style={{...styles.quantityDisplay, fontSize: '1.2rem', minWidth: '3rem'}}>
+                  {newItem.quantity}
+                </span>
+                <button
+                  onClick={() => setNewItem({ ...newItem, quantity: Math.min(100, newItem.quantity + 1) })}
+                  style={styles.quantityButton}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = '#f3f4f6';
+                    e.target.style.borderColor = '#9ca3af';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = '#ffffff';
+                    e.target.style.borderColor = '#d1d5db';
+                  }}
+                  disabled={newItem.quantity >= 100}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            <div style={styles.modalActions}>
+              <button
+                onClick={() => {
+                  setShowAddItemModal(false);
+                  setNewItem({ name: '', quantity: 1, confidence: 100 });
+                }}
+                style={styles.cancelButton}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={addNewItem}
+                disabled={!newItem.name.trim()}
+                style={{
+                  ...styles.submitButton,
+                  opacity: !newItem.name.trim() ? 0.5 : 1,
+                  cursor: !newItem.name.trim() ? 'not-allowed' : 'pointer'
+                }}
+              >
+                Add Item
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Navigation Buttons */}
       <div style={styles.buttonContainer}>

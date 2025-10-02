@@ -63,6 +63,13 @@ const damageLocations = [
 const ReviewObjectsStage = () => {
   const { workflowData, updateWorkflowData, prevStage, nextStage } = useWorkflow();
   const [reviewedObjects, setReviewedObjects] = useState([]);
+  const [showAddItemModal, setShowAddItemModal] = useState(false);
+  const [newItem, setNewItem] = useState({
+    class: '',
+    quantity: 1,
+    handlingCode: '',
+    comments: '',
+  });
 
   useEffect(() => {
     // Initialize reviewed objects from analysis results
@@ -99,6 +106,42 @@ const ReviewObjectsStage = () => {
 
   const toggleExclude = (id) => {
     updateObject(id, { exclude: !reviewedObjects.find(obj => obj.id === id)?.exclude });
+  };
+
+  const addNewItem = () => {
+    if (!newItem.class.trim()) return;
+
+    // Generate new ID based on existing objects
+    const maxId = reviewedObjects.length > 0 
+      ? Math.max(...reviewedObjects.map(obj => obj.id))
+      : 0;
+
+    const itemsToAdd = [];
+    for (let i = 0; i < newItem.quantity; i++) {
+      const newObj = {
+        id: maxId + i + 1,
+        class: newItem.class.trim(),
+        confidence: 1.0, // Manual entry = 100% confidence
+        bbox: null, // No bounding box for manual entries
+        condition: 'Good',
+        comments: newItem.comments,
+        verified: true, // Manually added items are pre-verified
+        exclude: false,
+        handlingCode: newItem.handlingCode,
+        damageType: '',
+        damageLocation: '',
+        manualEntry: true, // Flag to indicate manual entry
+      };
+      itemsToAdd.push(newObj);
+    }
+
+    const updated = [...reviewedObjects, ...itemsToAdd];
+    setReviewedObjects(updated);
+    updateWorkflowData({ reviewedObjects: updated });
+
+    // Reset form and close modal
+    setNewItem({ class: '', quantity: 1, handlingCode: '', comments: '' });
+    setShowAddItemModal(false);
   };
 
   const styles = {
@@ -337,6 +380,92 @@ const ReviewObjectsStage = () => {
       color: 'white',
       boxShadow: '0 4px 15px 0 rgba(102, 126, 234, 0.3)',
     },
+    addItemButton: {
+      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+      color: 'white',
+      boxShadow: '0 4px 15px 0 rgba(16, 185, 129, 0.3)',
+    },
+    modalOverlay: {
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000,
+    },
+    modalContent: {
+      backgroundColor: 'white',
+      borderRadius: '16px',
+      padding: '2rem',
+      maxWidth: '500px',
+      width: '90%',
+      maxHeight: '80vh',
+      overflow: 'auto',
+      boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+    },
+    modalTitle: {
+      fontSize: '1.5rem',
+      fontWeight: '600',
+      marginBottom: '1rem',
+      color: '#374151',
+    },
+    modalDescription: {
+      fontSize: '0.95rem',
+      color: '#6b7280',
+      marginBottom: '1.5rem',
+      lineHeight: '1.5',
+    },
+    inputGroup: {
+      marginBottom: '1.5rem',
+    },
+    input: {
+      width: '100%',
+      padding: '0.75rem',
+      border: '2px solid #e5e7eb',
+      borderRadius: '8px',
+      fontSize: '1rem',
+      boxSizing: 'border-box',
+      transition: 'border-color 0.3s ease',
+    },
+    modalActions: {
+      display: 'flex',
+      gap: '1rem',
+      justifyContent: 'flex-end',
+      marginTop: '2rem',
+    },
+    cancelButton: {
+      padding: '0.75rem 1.5rem',
+      border: '2px solid #e5e7eb',
+      borderRadius: '8px',
+      backgroundColor: 'white',
+      color: '#6b7280',
+      fontWeight: '600',
+      cursor: 'pointer',
+      transition: 'all 0.3s ease',
+    },
+    submitButton: {
+      padding: '0.75rem 1.5rem',
+      border: 'none',
+      borderRadius: '8px',
+      backgroundColor: '#10b981',
+      color: 'white',
+      fontWeight: '600',
+      cursor: 'pointer',
+      transition: 'all 0.3s ease',
+    },
+    manualEntryBadge: {
+      fontSize: '0.7rem',
+      backgroundColor: '#10b981',
+      color: 'white',
+      padding: '0.25rem 0.5rem',
+      borderRadius: '4px',
+      fontWeight: '600',
+      textTransform: 'uppercase',
+    },
   };
 
   const getConfidenceStyle = (confidence) => {
@@ -381,6 +510,19 @@ const ReviewObjectsStage = () => {
         Add conditions, comments, and verify or exclude objects as needed.
       </p>
 
+      {/* Add Item Button */}
+      <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+        <button
+          onClick={() => setShowAddItemModal(true)}
+          style={{
+            ...styles.navButton,
+            ...styles.addItemButton
+          }}
+        >
+          ➕ Add Item Manually
+        </button>
+      </div>
+
       {/* Summary Bar */}
       <div style={styles.summaryBar}>
         <div style={styles.summaryItem}>
@@ -403,8 +545,15 @@ const ReviewObjectsStage = () => {
           <div key={obj.id} style={getCardStyle(obj)}>
             {/* Card Header */}
             <div style={styles.cardHeader}>
-              <div style={styles.objectClass}>
-                {obj.class}
+              <div style={styles.cardHeaderLeft}>
+                <div style={styles.objectClass}>
+                  {obj.class}
+                </div>
+                {obj.manualEntry && (
+                  <div style={styles.manualEntryBadge}>
+                    Manual Entry
+                  </div>
+                )}
               </div>
               <div style={styles.cardHeaderRight}>
                 <div style={getConfidenceStyle(obj.confidence)}>
@@ -590,6 +739,90 @@ const ReviewObjectsStage = () => {
           </div>
         ))}
       </div>
+
+      {/* Add Item Modal */}
+      {showAddItemModal && (
+        <div style={styles.modalOverlay} onClick={() => setShowAddItemModal(false)}>
+          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <h3 style={styles.modalTitle}>➕ Add New Item</h3>
+            <p style={styles.modalDescription}>
+              Manually add an item to your inventory. Enter the item details below.
+            </p>
+
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Item Name *</label>
+              <input
+                type="text"
+                value={newItem.class}
+                onChange={(e) => setNewItem({ ...newItem, class: e.target.value })}
+                placeholder="e.g., Dining Chair, Bookshelf, etc."
+                style={styles.input}
+              />
+            </div>
+
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Quantity</label>
+              <input
+                type="number"
+                min="1"
+                max="100"
+                value={newItem.quantity}
+                onChange={(e) => setNewItem({ ...newItem, quantity: parseInt(e.target.value) || 1 })}
+                style={styles.input}
+              />
+            </div>
+
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Handling Code</label>
+              <select
+                value={newItem.handlingCode}
+                onChange={(e) => setNewItem({ ...newItem, handlingCode: e.target.value })}
+                style={styles.select}
+              >
+                <option value="">Select Handling Code (Optional)</option>
+                {handlingCodes.map((code) => (
+                  <option key={code.value} value={code.value}>
+                    {code.value} - {code.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Comments</label>
+              <textarea
+                value={newItem.comments}
+                onChange={(e) => setNewItem({ ...newItem, comments: e.target.value })}
+                placeholder="Add any additional notes about this item"
+                style={styles.textarea}
+              />
+            </div>
+
+            <div style={styles.modalActions}>
+              <button
+                onClick={() => {
+                  setShowAddItemModal(false);
+                  setNewItem({ class: '', quantity: 1, handlingCode: '', comments: '' });
+                }}
+                style={styles.cancelButton}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={addNewItem}
+                disabled={!newItem.class.trim()}
+                style={{
+                  ...styles.submitButton,
+                  opacity: !newItem.class.trim() ? 0.5 : 1,
+                  cursor: !newItem.class.trim() ? 'not-allowed' : 'pointer'
+                }}
+              >
+                Add Item{newItem.quantity > 1 ? `s (${newItem.quantity})` : ''}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Navigation Buttons */}
       <div style={styles.buttonContainer}>

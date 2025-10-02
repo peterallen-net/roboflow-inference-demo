@@ -42,11 +42,19 @@ api.interceptors.response.use(
 // API methods for image analysis
 export const imageAPI = {
   // Upload and analyze image
-  analyzeImage: async (imageFile) => {
+  analyzeImage: async (imageFile, userId = null, metadata = null) => {
     const formData = new FormData();
     formData.append('image', imageFile);
     
-    const response = await api.post('/analyze', formData, {
+    if (userId) {
+      formData.append('user_id', userId);
+    }
+    
+    if (metadata) {
+      formData.append('metadata', JSON.stringify(metadata));
+    }
+    
+    const response = await api.post('/api/v1/analyze', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -55,15 +63,31 @@ export const imageAPI = {
   },
   
   // Get analysis results by ID
-  getAnalysisResult: async (analysisId) => {
-    const response = await api.get(`/analysis/${analysisId}`);
+  getAnalysisResult: async (resultId) => {
+    const response = await api.get(`/api/v1/results/${resultId}`);
     return response.data;
   },
   
-  // Get analysis history
-  getAnalysisHistory: async () => {
-    const response = await api.get('/history');
+  // Get analysis history with pagination
+  getAnalysisHistory: async (userId = null, limit = 20, offset = 0) => {
+    const params = { limit, offset };
+    if (userId) {
+      params.user_id = userId;
+    }
+    
+    const response = await api.get('/api/v1/results', { params });
     return response.data;
+  },
+  
+  // Delete analysis result
+  deleteAnalysisResult: async (resultId) => {
+    const response = await api.delete(`/api/v1/results/${resultId}`);
+    return response.data;
+  },
+  
+  // Get annotated image URL
+  getImageUrl: (resultId) => {
+    return `${api.defaults.baseURL}/api/v1/results/${resultId}/image`;
   },
 };
 

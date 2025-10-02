@@ -408,10 +408,14 @@ const AnalysisOutputStage = () => {
   const getObjectList = () => {
     const detectedObjects = [];
     
-    if (workflowData.analysisResult?.detections) {
+    // Handle new API format (predictions) or old format (detections) for backwards compatibility
+    const predictions = workflowData.analysisResult?.predictions || workflowData.analysisResult?.detections;
+    
+    if (predictions) {
       const grouped = {};
-      workflowData.analysisResult.detections.forEach(detection => {
-        const className = detection.class;
+      predictions.forEach(prediction => {
+        // Handle both new format (class_name) and old format (class)
+        const className = prediction.class_name || prediction.class;
         if (!grouped[className]) {
           grouped[className] = {
             name: className,
@@ -420,7 +424,7 @@ const AnalysisOutputStage = () => {
           };
         }
         grouped[className].count += 1;
-        grouped[className].totalConfidence += detection.confidence;
+        grouped[className].totalConfidence += prediction.confidence;
       });
 
       detectedObjects.push(...Object.values(grouped)
@@ -497,16 +501,18 @@ const AnalysisOutputStage = () => {
   };
 
   const getSummaryStats = () => {
-    if (!workflowData.analysisResult?.detections) {
+    // Handle new API format (predictions) or old format (detections)
+    const predictions = workflowData.analysisResult?.predictions || workflowData.analysisResult?.detections;
+    
+    if (!predictions || predictions.length === 0) {
       return {
         totalObjects: 0,
         avgConfidence: 0
       };
     }
 
-    const detections = workflowData.analysisResult.detections;
-    const totalObjects = detections.length;
-    const avgConfidence = detections.reduce((sum, det) => sum + det.confidence, 0) / totalObjects;
+    const totalObjects = predictions.length;
+    const avgConfidence = predictions.reduce((sum, pred) => sum + pred.confidence, 0) / totalObjects;
 
     return {
       totalObjects,
@@ -558,11 +564,17 @@ const AnalysisOutputStage = () => {
                     style={styles.annotatedImage}
                   />
                   <div style={styles.imageInfo}>
-                    <strong>Analysis Complete:</strong> {workflowData.analysisResult?.detections?.length || 0} objects detected<br/>
+                    <strong>Analysis Complete:</strong> {workflowData.analysisResult?.prediction_count || stats.totalObjects} objects detected<br/>
                     <strong>Average Confidence:</strong> {stats.avgConfidence}%<br/>
                     <strong>Model:</strong> {workflowData.analysisResult?.model_version || 'Unknown'}<br/>
-                    <strong>Timestamp:</strong> {workflowData.analysisResult?.timestamp ? new Date(workflowData.analysisResult.timestamp).toLocaleString() : 'Unknown'}<br/>
-                    {workflowData.analysisResult?.demo_mode && <strong style={{color: '#f59e0b'}}>⚠️ Demo Mode Active</strong>}
+                    <strong>Processing Time:</strong> {workflowData.analysisResult?.processing_time_ms ? `${workflowData.analysisResult.processing_time_ms}ms` : 'Unknown'}<br/>
+                    <strong>Timestamp:</strong> {workflowData.analysisResult?.created_at ? new Date(workflowData.analysisResult.created_at).toLocaleString() : 'Unknown'}<br/>
+                    {workflowData.analysisResult?.status && (
+                      <>
+                        <strong>Status:</strong> {workflowData.analysisResult.status}<br/>
+                      </>
+                    )}
+                    {(workflowData.analysisResult?.demo_mode || workflowData.analysisResult?.metadata?.demo_mode) && <strong style={{color: '#f59e0b'}}>⚠️ Demo Mode Active</strong>}
                   </div>
                 </>
               ) : (

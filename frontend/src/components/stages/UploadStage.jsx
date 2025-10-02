@@ -38,22 +38,27 @@ const UploadStage = () => {
     setError(null);
 
     try {
-      const result = await imageAPI.analyzeImage(workflowData.selectedFile);
+      const response = await imageAPI.analyzeImage(workflowData.selectedFile);
       
-      let annotatedImageUrl = null;
-      if (result.annotated_image_url) {
-        annotatedImageUrl = result.annotated_image_url;
-      } else if (result.annotated_image) {
-        annotatedImageUrl = `data:image/jpeg;base64,${result.annotated_image}`;
+      // Handle new v1 API response format
+      if (response.success && response.result) {
+        const result = response.result;
+        
+        // Get annotated image URL from the API
+        const annotatedImageUrl = result.image_url 
+          ? `http://localhost:8000${result.image_url}`
+          : null;
+
+        updateWorkflowData({
+          analysisResult: result,
+          annotatedImageUrl: annotatedImageUrl,
+        });
+
+        // Auto-advance to next stage
+        nextStage();
+      } else {
+        throw new Error('Invalid response format from API');
       }
-
-      updateWorkflowData({
-        analysisResult: result,
-        annotatedImageUrl: annotatedImageUrl,
-      });
-
-      // Auto-advance to next stage
-      nextStage();
       
     } catch (err) {
       console.error('Analysis error:', err);
@@ -63,106 +68,107 @@ const UploadStage = () => {
         // Demo mode - simulate successful analysis for development
         setTimeout(() => {
           const mockResult = {
-            message: "Analysis complete",
-            detections: [
+            result_id: "demo-uuid-12345",
+            filename: workflowData.selectedFile.name,
+            created_at: new Date().toISOString(),
+            predictions: [
               {
-                class: "bed",
+                id: "pred-1",
+                class_name: "bed",
                 confidence: 0.95,
-                bbox: {
+                bounding_box: {
                   x: 120,
                   y: 200,
                   width: 400,
                   height: 300
-                },
-                id: 1
+                }
               },
               {
-                class: "nightstand",
+                id: "pred-2",
+                class_name: "nightstand",
                 confidence: 0.84,
-                bbox: {
+                bounding_box: {
                   x: 560,
                   y: 240,
                   width: 100,
                   height: 120
-                },
-                id: 2
+                }
               },
               {
-                class: "lamp",
+                id: "pred-3",
+                class_name: "lamp",
                 confidence: 0.87,
-                bbox: {
+                bounding_box: {
                   x: 580,
                   y: 180,
                   width: 60,
                   height: 100
-                },
-                id: 3
+                }
               },
               {
-                class: "dresser",
+                id: "pred-4",
+                class_name: "dresser",
                 confidence: 0.82,
-                bbox: {
+                bounding_box: {
                   x: 700,
                   y: 300,
                   width: 180,
                   height: 200
-                },
-                id: 4
+                }
               },
               {
-                class: "mirror",
+                id: "pred-5",
+                class_name: "mirror",
                 confidence: 0.79,
-                bbox: {
+                bounding_box: {
                   x: 720,
                   y: 120,
                   width: 160,
                   height: 200
-                },
-                id: 5
+                }
               },
               {
-                class: "closet",
+                id: "pred-6",
+                class_name: "closet",
                 confidence: 0.86,
-                bbox: {
+                bounding_box: {
                   x: 50,
                   y: 100,
                   width: 200,
                   height: 400
-                },
-                id: 6
+                }
               },
               {
-                class: "painting",
+                id: "pred-7",
+                class_name: "painting",
                 confidence: 0.80,
-                bbox: {
+                bounding_box: {
                   x: 420,
                   y: 90,
                   width: 220,
                   height: 140
-                },
-                id: 7
+                }
               },
               {
-                class: "rug",
+                id: "pred-8",
+                class_name: "rug",
                 confidence: 0.83,
-                bbox: {
+                bounding_box: {
                   x: 200,
                   y: 500,
                   width: 300,
                   height: 180
-                },
-                id: 8
+                }
               }
             ],
-            processing_time: 2.34,
-            image_size: {
-              width: 1024,
-              height: 768
-            },
+            prediction_count: 8,
+            processing_time_ms: 2340,
             model_version: "v8.0",
-            timestamp: "2025-09-29T21:11:03.628Z",
-            demo_mode: true,
-            note: "This is demo data. Backend server is not running on localhost:8000"
+            status: "completed",
+            metadata: {
+              demo_mode: true,
+              note: "This is demo data. Backend server is not running on localhost:8000"
+            }
           };
           
           updateWorkflowData({

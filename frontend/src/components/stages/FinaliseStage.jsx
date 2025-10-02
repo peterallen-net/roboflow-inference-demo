@@ -72,17 +72,19 @@ const FinaliseStage = () => {
 
   const generateFinalReport = () => {
     const includedObjects = workflowData.reviewedObjects?.filter(obj => !obj.exclude) || [];
+    const predictions = workflowData.analysisResult?.predictions || workflowData.analysisResult?.detections || [];
+    
     const report = {
       id: `REPORT_${Date.now()}`,
       timestamp: new Date().toISOString(),
       analysis: {
         originalImage: workflowData.selectedFile?.name || 'Unknown',
         annotatedImage: workflowData.annotatedImageUrl ? 'Available' : 'Not Available',
-        totalObjectsDetected: workflowData.analysisResult?.detections?.length || 0,
+        totalObjectsDetected: predictions.length,
         objectsIncluded: includedObjects.length,
-        processingTime: workflowData.analysisResult?.processing_time || 0,
+        processingTime: workflowData.analysisResult?.processing_time_ms || workflowData.analysisResult?.processing_time || 0,
         modelVersion: workflowData.analysisResult?.model_version || 'Unknown',
-        demoMode: workflowData.analysisResult?.demo_mode || false
+        demoMode: workflowData.analysisResult?.demo_mode || workflowData.analysisResult?.metadata?.demo_mode || false
       },
       objects: includedObjects.map(obj => ({
         id: obj.id,
@@ -91,8 +93,11 @@ const FinaliseStage = () => {
         condition: obj.condition,
         comments: obj.comments || 'None',
         verified: obj.verified,
-        position: `(${obj.bbox.x}, ${obj.bbox.y})`,
-        size: `${obj.bbox.width} × ${obj.bbox.height}px`
+        handlingCode: obj.handlingCode || '',
+        damageType: obj.damageType || '',
+        damageLocation: obj.damageLocation || '',
+        position: obj.bbox ? `(${obj.bbox.x}, ${obj.bbox.y})` : 'N/A',
+        size: obj.bbox ? `${obj.bbox.width} × ${obj.bbox.height}px` : 'N/A'
       })),
       signature: workflowData.signature,
       summary: {
@@ -310,8 +315,10 @@ const FinaliseStage = () => {
 
   const getSummaryData = () => {
     const includedObjects = workflowData.reviewedObjects?.filter(obj => !obj.exclude) || [];
+    const predictions = workflowData.analysisResult?.predictions || workflowData.analysisResult?.detections || [];
+    
     return {
-      'Total Objects Detected': workflowData.analysisResult?.detections?.length || 0,
+      'Total Objects Detected': predictions.length,
       'Objects Included': includedObjects.length,
       'Objects Verified': includedObjects.filter(obj => obj.verified).length,
       'Analysis Date': new Date().toLocaleDateString(),
@@ -391,7 +398,7 @@ const FinaliseStage = () => {
           </div>
         )}
         
-        {workflowData.analysisResult?.demo_mode && (
+        {(workflowData.analysisResult?.demo_mode || workflowData.analysisResult?.metadata?.demo_mode) && (
           <div style={{
             padding: '0.75rem',
             backgroundColor: '#fef3c7',

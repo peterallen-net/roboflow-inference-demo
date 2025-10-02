@@ -1,11 +1,9 @@
 """
-Roboflow Inference Demo API - Database Integration Version
+Roboflow Inference Demo API - Phase 1 & 2 Implementation
 """
-from fastapi import FastAPI, File, UploadFile, HTTPException, Query, Depends
+from fastapi import FastAPI, File, UploadFile, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-from sqlalchemy.orm import Session
-from sqlalchemy import text
+from fastapi.responses import JSONResponse, FileResponse
 import cv2
 import numpy as np
 from inference_sdk import InferenceHTTPClient
@@ -16,40 +14,32 @@ import base64
 from datetime import datetime
 import tempfile
 import uvicorn
-import uuid as uuid_lib
+import uuid
 import time
 import requests
 from typing import Optional
-
-# Import database components
-from database import get_db, engine
-from db_models import Base, AnalysisResult as DBAnalysisResult, Prediction as DBPrediction, StatusEnum as DBStatusEnum
-import crud
-
-# Import Pydantic models
 from models import (
     AnalyzeImageURLRequest,
     AnalysisResponse,
     ResultsListResponse,
     HealthResponse,
     DeleteResponse,
+    ErrorResponse,
     AnalysisResult,
     AnalysisResultSummary,
     Prediction,
     BoundingBox,
     StatusEnum,
+    ErrorTypeEnum
 )
 
 # API Version
-API_VERSION = "2.0.0"
-
-# Create tables (if not exists)
-Base.metadata.create_all(bind=engine)
+API_VERSION = "1.0.0"
 
 app = FastAPI(
     title="Roboflow Inference Demo API",
     version=API_VERSION,
-    description="AI-powered image analysis API using Roboflow with PostgreSQL"
+    description="AI-powered image analysis API using Roboflow"
 )
 
 # Add CORS middleware
@@ -72,7 +62,9 @@ client = InferenceHTTPClient(
 )
 
 # Data directories
+OUTPUT_DIR = os.path.join("data", "output_json")
 ANNOTATED_DIR = os.path.join("data", "annotated_images")
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs(ANNOTATED_DIR, exist_ok=True)
 
 
@@ -116,11 +108,12 @@ def draw_boxes(image, predictions):
 
 
 def process_predictions(raw_predictions) -> list:
-    """Convert raw predictions to structured format"""
+    """Convert raw predictions to Prediction model format"""
     predictions = []
-    for pred in raw_predictions:
+    for i, pred in enumerate(raw_predictions):
         predictions.append({
-            "class_name": pred.get("class", "unknown"),
+            "id": f"pred_{i}_{uuid.uuid4().hex[:8]}",
+            "class": pred.get("class", "unknown"),
             "confidence": pred.get("confidence", 0.0),
             "bounding_box": {
                 "x": pred.get("x", 0),
@@ -132,35 +125,42 @@ def process_predictions(raw_predictions) -> list:
     return predictions
 
 
-def db_result_to_pydantic(db_result: DBAnalysisResult) -> AnalysisResult:
-    """Convert database model to Pydantic model"""
-    predictions = []
-    for db_pred in db_result.predictions:
-        predictions.append(Prediction(
-            id=str(db_pred.id),
-            class_name=db_pred.class_name,
-            confidence=db_pred.confidence,
-            bounding_box=BoundingBox(
-                x=db_pred.bbox_x,
-                y=db_pred.bbox_y,
-                width=db_pred.bbox_width,
-                height=db_pred.bbox_height
-            )
-        ))
-    
-    return AnalysisResult(
-        result_id=str(db_result.id),
-        filename=db_result.filename,
-        created_at=db_result.created_at,
-        user_id=db_result.user_id,
-        metadata=db_result.user_metadata,
-        predictions=predictions,
-        prediction_count=db_result.prediction_count,
-        model_version=db_result.model_version,
-        processing_time_ms=db_result.processing_time_ms,
-        image_url=f"/api/v1/results/{db_result.id}/image",
-        status=StatusEnum(db_result.status.value)
-    )
+def save_result_metadata(result_id: str, result_data: dict):
+    """Save result metadata to JSON file"""
+    json_path = os.path.join(OUTPUT_DIR, f"{result_id}.json")
+    with open(json_path, "w") as f:
+        json.dump(result_data, f, indent=2, default=str)
+    return json_path
+
+
+def load_result_metadata(result_id: str) -> Optional[dict]:
+    """Load result metadata from JSON file"""
+    json_path = os.path.join(OUTPUT_DIR, f"{result_id}.json")
+    if not os.path.exists(json_path):
+        return None
+    try:
+        with open(json_path, 'r') as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def delete_result_files(result_id: str) -> bool:
+    """Delete all files associated with a result"""
+    try:
+        # Delete JSON metadata
+        json_path = os.path.join(OUTPUT_DIR, f"{result_id}.json")
+        if os.path.exists(json_path):
+            os.remove(json_path)
+        
+        # Delete annotated image
+        img_path = os.path.join(ANNOTATED_DIR, f"{result_id}.jpg")
+        if os.path.exists(img_path):
+            os.remove(img_path)
+        
+        return True
+    except Exception:
+        return False
 
 
 # ============================================================================
@@ -168,20 +168,12 @@ def db_result_to_pydantic(db_result: DBAnalysisResult) -> AnalysisResult:
 # ============================================================================
 
 @app.get("/api/v1/health", response_model=HealthResponse)
-async def health_check(db: Session = Depends(get_db)):
-    """Health check endpoint with database status"""
-    try:
-        # Test database connection
-        db.execute(text("SELECT 1"))
-        db_status = "healthy"
-    except Exception as e:
-        db_status = f"unhealthy: {str(e)}"
-    
+async def health_check():
+    """Health check endpoint"""
     return HealthResponse(
-        status="healthy" if db_status == "healthy" else "degraded",
+        status="healthy",
         version=API_VERSION,
-        timestamp=datetime.utcnow(),
-        database_status=db_status
+        timestamp=datetime.utcnow()
     )
 
 
@@ -189,8 +181,7 @@ async def health_check(db: Session = Depends(get_db)):
 async def analyze_image(
     image: UploadFile = File(...),
     user_id: Optional[str] = None,
-    metadata: Optional[str] = None,
-    db: Session = Depends(get_db)
+    metadata: Optional[str] = None
 ):
     """
     Analyze uploaded image using Roboflow model
@@ -200,7 +191,7 @@ async def analyze_image(
     - **metadata**: Optional JSON string with additional metadata
     """
     start_time = time.time()
-    result_id = uuid_lib.uuid4()
+    result_id = str(uuid.uuid4())
     
     try:
         # Validate file type
@@ -240,6 +231,7 @@ async def analyze_image(
             )
             
             # Process annotated image and predictions
+            annotated_image_base64 = None
             raw_predictions = []
             
             if isinstance(result, list) and len(result) > 0:
@@ -252,6 +244,7 @@ async def analyze_image(
                         img_path = os.path.join(ANNOTATED_DIR, f"{result_id}.jpg")
                         with open(img_path, "wb") as f:
                             f.write(image_data)
+                        annotated_image_base64 = first_result["output_image"]
                     except Exception as e:
                         print(f"Error processing API annotated image: {e}")
                 
@@ -261,13 +254,15 @@ async def analyze_image(
                     if isinstance(pred_data, dict) and "predictions" in pred_data:
                         raw_predictions = pred_data["predictions"]
             
-            # Create our own annotated image if needed
-            img_path = os.path.join(ANNOTATED_DIR, f"{result_id}.jpg")
-            if not os.path.exists(img_path) and raw_predictions:
+            # Create our own annotated image if none from API
+            if not annotated_image_base64 and raw_predictions:
                 original_image = cv2.imread(temp_file_path)
                 if original_image is not None:
                     annotated_image = draw_boxes(original_image.copy(), raw_predictions)
+                    img_path = os.path.join(ANNOTATED_DIR, f"{result_id}.jpg")
                     cv2.imwrite(img_path, annotated_image)
+                    _, buffer = cv2.imencode('.jpg', annotated_image)
+                    annotated_image_base64 = base64.b64encode(buffer).decode('utf-8')
             
             # Process predictions into structured format
             predictions = process_predictions(raw_predictions)
@@ -275,21 +270,35 @@ async def analyze_image(
             # Calculate processing time
             processing_time_ms = int((time.time() - start_time) * 1000)
             
-            # Save to database
-            db_result = crud.create_analysis_result(
-                db=db,
+            # Create result object
+            analysis_result = AnalysisResult(
+                result_id=result_id,
                 filename=image.filename,
-                predictions_data=predictions,
+                created_at=datetime.utcnow(),
                 user_id=user_id,
                 metadata=parsed_metadata if parsed_metadata else None,
+                predictions=[Prediction(**p) for p in predictions],
+                prediction_count=len(predictions),
                 model_version=config.WORKFLOW_ID,
                 processing_time_ms=processing_time_ms,
-                image_path=img_path if os.path.exists(img_path) else None,
-                status=DBStatusEnum.COMPLETED
+                image_url=f"/api/v1/results/{result_id}/image",
+                status=StatusEnum.COMPLETED
             )
             
-            # Convert to Pydantic model
-            analysis_result = db_result_to_pydantic(db_result)
+            # Save metadata
+            save_result_metadata(result_id, {
+                "result_id": result_id,
+                "filename": image.filename,
+                "created_at": datetime.utcnow().isoformat(),
+                "user_id": user_id,
+                "metadata": parsed_metadata,
+                "predictions": predictions,
+                "prediction_count": len(predictions),
+                "model_version": config.WORKFLOW_ID,
+                "processing_time_ms": processing_time_ms,
+                "status": "completed",
+                "raw_result": result
+            })
             
             return AnalysisResponse(
                 success=True,
@@ -315,8 +324,7 @@ async def analyze_image(
 async def list_results(
     user_id: Optional[str] = Query(None, description="Filter by user ID"),
     limit: int = Query(20, ge=1, le=100, description="Results per page"),
-    offset: int = Query(0, ge=0, description="Offset for pagination"),
-    db: Session = Depends(get_db)
+    offset: int = Query(0, ge=0, description="Offset for pagination")
 ):
     """
     List analysis results with optional filtering and pagination
@@ -326,31 +334,59 @@ async def list_results(
     - **offset**: Number of results to skip
     """
     try:
-        # Get results from database
-        results, total_count = crud.list_analysis_results(
-            db=db,
-            user_id=user_id,
-            limit=limit,
-            offset=offset
-        )
+        all_results = []
         
-        # Convert to Pydantic models
-        result_summaries = []
-        for db_result in results:
-            result_summaries.append(AnalysisResultSummary(
-                result_id=str(db_result.id),
-                filename=db_result.filename,
-                created_at=db_result.created_at,
-                user_id=db_result.user_id,
-                prediction_count=db_result.prediction_count,
-                status=StatusEnum(db_result.status.value)
-            ))
+        # Load all result metadata files
+        for filename in os.listdir(OUTPUT_DIR):
+            if filename.endswith('.json'):
+                json_path = os.path.join(OUTPUT_DIR, filename)
+                try:
+                    with open(json_path, 'r') as f:
+                        data = json.load(f)
+                    
+                    # Handle old format (array with single object)
+                    if isinstance(data, list) and len(data) > 0:
+                        data = data[0]
+                        # Old format doesn't have these fields
+                        prediction_count = data.get('count_objects', 0)
+                        result_id = filename.replace('.json', '')
+                        file_timestamp = os.path.getmtime(json_path)
+                        created_at = datetime.fromtimestamp(file_timestamp)
+                    else:
+                        # New format
+                        prediction_count = data.get('prediction_count', 0)
+                        result_id = data.get('result_id', filename.replace('.json', ''))
+                        created_at = datetime.fromisoformat(
+                            data.get('created_at', datetime.utcnow().isoformat())
+                        )
+                    
+                    # Filter by user_id if provided
+                    if user_id and data.get('user_id') != user_id:
+                        continue
+                    
+                    all_results.append(AnalysisResultSummary(
+                        result_id=result_id,
+                        filename=data.get('filename', 'unknown'),
+                        created_at=created_at,
+                        user_id=data.get('user_id'),
+                        prediction_count=prediction_count,
+                        status=StatusEnum(data.get('status', 'completed'))
+                    ))
+                except Exception as e:
+                    print(f"Error loading {filename}: {e}")
+                    continue
         
+        # Sort by created_at (newest first)
+        all_results.sort(key=lambda x: x.created_at, reverse=True)
+        
+        # Apply pagination
+        total_count = len(all_results)
+        paginated_results = all_results[offset:offset + limit]
         has_more = (offset + limit) < total_count
         
         return ResultsListResponse(
             success=True,
-            results=result_summaries,
+            results=paginated_results,
             total_count=total_count,
             limit=limit,
             offset=offset,
@@ -369,10 +405,7 @@ async def list_results(
 # ============================================================================
 
 @app.post("/api/v1/analyze/url", response_model=AnalysisResponse, status_code=201)
-async def analyze_image_url(
-    request: AnalyzeImageURLRequest,
-    db: Session = Depends(get_db)
-):
+async def analyze_image_url(request: AnalyzeImageURLRequest):
     """
     Analyze image from URL using Roboflow model
     
@@ -381,7 +414,7 @@ async def analyze_image_url(
     - **metadata**: Optional additional metadata
     """
     start_time = time.time()
-    result_id = uuid_lib.uuid4()
+    result_id = str(uuid.uuid4())
     temp_file_path = None
     
     try:
@@ -411,6 +444,7 @@ async def analyze_image_url(
         )
         
         # Process results (similar to analyze_image)
+        annotated_image_base64 = None
         raw_predictions = []
         
         if isinstance(result, list) and len(result) > 0:
@@ -422,6 +456,7 @@ async def analyze_image_url(
                     img_path = os.path.join(ANNOTATED_DIR, f"{result_id}.jpg")
                     with open(img_path, "wb") as f:
                         f.write(image_data)
+                    annotated_image_base64 = first_result["output_image"]
                 except Exception as e:
                     print(f"Error processing API annotated image: {e}")
             
@@ -430,12 +465,14 @@ async def analyze_image_url(
                 if isinstance(pred_data, dict) and "predictions" in pred_data:
                     raw_predictions = pred_data["predictions"]
         
-        img_path = os.path.join(ANNOTATED_DIR, f"{result_id}.jpg")
-        if not os.path.exists(img_path) and raw_predictions:
+        if not annotated_image_base64 and raw_predictions:
             original_image = cv2.imread(temp_file_path)
             if original_image is not None:
                 annotated_image = draw_boxes(original_image.copy(), raw_predictions)
+                img_path = os.path.join(ANNOTATED_DIR, f"{result_id}.jpg")
                 cv2.imwrite(img_path, annotated_image)
+                _, buffer = cv2.imencode('.jpg', annotated_image)
+                annotated_image_base64 = base64.b64encode(buffer).decode('utf-8')
         
         predictions = process_predictions(raw_predictions)
         processing_time_ms = int((time.time() - start_time) * 1000)
@@ -443,22 +480,35 @@ async def analyze_image_url(
         # Extract filename from URL
         filename = request.image_url.split('/')[-1].split('?')[0] or 'url_image.jpg'
         
-        # Save to database
-        db_result = crud.create_analysis_result(
-            db=db,
+        analysis_result = AnalysisResult(
+            result_id=result_id,
             filename=filename,
-            predictions_data=predictions,
+            created_at=datetime.utcnow(),
             user_id=request.user_id,
             metadata=request.metadata,
+            predictions=[Prediction(**p) for p in predictions],
+            prediction_count=len(predictions),
             model_version=config.WORKFLOW_ID,
             processing_time_ms=processing_time_ms,
-            image_path=img_path if os.path.exists(img_path) else None,
-            source_url=request.image_url,
-            status=DBStatusEnum.COMPLETED
+            image_url=f"/api/v1/results/{result_id}/image",
+            status=StatusEnum.COMPLETED
         )
         
-        # Convert to Pydantic model
-        analysis_result = db_result_to_pydantic(db_result)
+        # Save metadata
+        save_result_metadata(result_id, {
+            "result_id": result_id,
+            "filename": filename,
+            "source_url": request.image_url,
+            "created_at": datetime.utcnow().isoformat(),
+            "user_id": request.user_id,
+            "metadata": request.metadata,
+            "predictions": predictions,
+            "prediction_count": len(predictions),
+            "model_version": config.WORKFLOW_ID,
+            "processing_time_ms": processing_time_ms,
+            "status": "completed",
+            "raw_result": result
+        })
         
         return AnalysisResponse(
             success=True,
@@ -484,33 +534,39 @@ async def analyze_image_url(
 
 
 @app.get("/api/v1/results/{result_id}", response_model=AnalysisResponse)
-async def get_result(result_id: str, db: Session = Depends(get_db)):
+async def get_result(result_id: str):
     """
     Get detailed information about a specific analysis result
     
     - **result_id**: UUID of the analysis result
     """
     try:
-        # Parse UUID
-        try:
-            uuid_obj = uuid_lib.UUID(result_id)
-        except ValueError:
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid UUID format"
-            )
+        # Load result metadata
+        metadata = load_result_metadata(result_id)
         
-        # Get from database
-        db_result = crud.get_analysis_result(db=db, result_id=uuid_obj)
-        
-        if not db_result:
+        if not metadata:
             raise HTTPException(
                 status_code=404,
                 detail=f"Result with ID {result_id} not found"
             )
         
-        # Convert to Pydantic model
-        analysis_result = db_result_to_pydantic(db_result)
+        # Parse predictions
+        predictions = [Prediction(**p) for p in metadata.get('predictions', [])]
+        
+        # Create result object
+        analysis_result = AnalysisResult(
+            result_id=metadata.get('result_id', result_id),
+            filename=metadata.get('filename', 'unknown'),
+            created_at=datetime.fromisoformat(metadata.get('created_at', datetime.utcnow().isoformat())),
+            user_id=metadata.get('user_id'),
+            metadata=metadata.get('metadata'),
+            predictions=predictions,
+            prediction_count=metadata.get('prediction_count', 0),
+            model_version=metadata.get('model_version'),
+            processing_time_ms=metadata.get('processing_time_ms'),
+            image_url=f"/api/v1/results/{result_id}/image",
+            status=StatusEnum(metadata.get('status', 'completed'))
+        )
         
         return AnalysisResponse(
             success=True,
@@ -528,93 +584,49 @@ async def get_result(result_id: str, db: Session = Depends(get_db)):
 
 
 @app.get("/api/v1/results/{result_id}/image")
-async def get_result_image(result_id: str, db: Session = Depends(get_db)):
+async def get_result_image(result_id: str):
     """
     Get the annotated image for a specific result
     
     - **result_id**: UUID of the analysis result
     """
-    try:
-        # Parse UUID
-        try:
-            uuid_obj = uuid_lib.UUID(result_id)
-        except ValueError:
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid UUID format"
-            )
-        
-        # Get from database
-        db_result = crud.get_analysis_result(db=db, result_id=uuid_obj)
-        
-        if not db_result:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Result with ID {result_id} not found"
-            )
-        
-        # Check if image file exists
-        if not db_result.image_path or not os.path.exists(db_result.image_path):
-            raise HTTPException(
-                status_code=404,
-                detail=f"Image for result {result_id} not found"
-            )
-        
-        return FileResponse(
-            db_result.image_path,
-            media_type="image/jpeg",
-            filename=f"{result_id}.jpg"
-        )
-        
-    except HTTPException:
-        raise
-    except Exception as e:
+    img_path = os.path.join(ANNOTATED_DIR, f"{result_id}.jpg")
+    
+    if not os.path.exists(img_path):
         raise HTTPException(
-            status_code=500,
-            detail=f"Error retrieving image: {str(e)}"
+            status_code=404,
+            detail=f"Image for result {result_id} not found"
         )
+    
+    return FileResponse(
+        img_path,
+        media_type="image/jpeg",
+        filename=f"{result_id}.jpg"
+    )
 
 
 @app.delete("/api/v1/results/{result_id}", response_model=DeleteResponse)
-async def delete_result(result_id: str, db: Session = Depends(get_db)):
+async def delete_result(result_id: str):
     """
     Delete a specific analysis result and its associated files
     
     - **result_id**: UUID of the analysis result to delete
     """
     try:
-        # Parse UUID
-        try:
-            uuid_obj = uuid_lib.UUID(result_id)
-        except ValueError:
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid UUID format"
-            )
-        
-        # Get result to find image path
-        db_result = crud.get_analysis_result(db=db, result_id=uuid_obj)
-        
-        if not db_result:
+        # Check if result exists
+        if not load_result_metadata(result_id):
             raise HTTPException(
                 status_code=404,
                 detail=f"Result with ID {result_id} not found"
             )
         
-        # Delete image file if exists
-        if db_result.image_path and os.path.exists(db_result.image_path):
-            try:
-                os.remove(db_result.image_path)
-            except Exception as e:
-                print(f"Error deleting image file: {e}")
-        
-        # Delete from database (will cascade to predictions)
-        success = crud.delete_analysis_result(db=db, result_id=uuid_obj)
+        # Delete files
+        success = delete_result_files(result_id)
         
         if not success:
             raise HTTPException(
                 status_code=500,
-                detail="Failed to delete result from database"
+                detail="Failed to delete result files"
             )
         
         return DeleteResponse(
@@ -638,26 +650,22 @@ async def delete_result(result_id: str, db: Session = Depends(get_db)):
 
 @app.get("/")
 async def root():
-    """Root endpoint - API information"""
+    """Root endpoint - redirects to health check"""
     return {
         "message": "Roboflow Inference Demo API",
         "version": API_VERSION,
         "status": "running",
-        "database": "PostgreSQL",
         "docs": "/docs",
         "health": "/api/v1/health"
     }
 
 
+# Keep old endpoints for backward compatibility (deprecated)
 @app.post("/analyze")
-async def analyze_image_legacy(
-    image: UploadFile = File(...),
-    db: Session = Depends(get_db)
-):
-    """DEPRECATED: Use /api/v1/analyze instead. Provided for frontend compatibility."""
+async def analyze_image_legacy(image: UploadFile = File(...)):
+    """DEPRECATED: Use /api/v1/analyze instead"""
     # Call the new endpoint
-    response = await analyze_image(image=image, db=db)
-    
+    response = await analyze_image(image=image)
     # Convert to old format for compatibility
     result = response.result
     return {
@@ -669,22 +677,18 @@ async def analyze_image_legacy(
                 "id": p.id,
                 "class": p.class_name,
                 "confidence": p.confidence,
-                "x": p.bounding_box.x,
-                "y": p.bounding_box.y,
-                "width": p.bounding_box.width,
-                "height": p.bounding_box.height
+                **p.bounding_box.dict()
             } for p in result.predictions
         ],
         "prediction_count": result.prediction_count,
-        "result_id": result.result_id,
-        "image_url": result.image_url
+        "result_id": result.result_id
     }
 
 
 @app.get("/history")
-async def get_analysis_history_legacy(db: Session = Depends(get_db)):
-    """DEPRECATED: Use /api/v1/results instead. Provided for frontend compatibility."""
-    response = await list_results(db=db)
+async def get_analysis_history_legacy():
+    """DEPRECATED: Use /api/v1/results instead"""
+    response = await list_results()
     return {
         "history": [
             {

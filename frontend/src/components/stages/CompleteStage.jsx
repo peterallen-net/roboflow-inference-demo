@@ -1,7 +1,80 @@
+import { useState } from 'react';
 import { useWorkflow } from '../AnalysisWorkflow';
 
 const CompleteStage = () => {
   const { workflowData, resetWorkflow } = useWorkflow();
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [showSMSModal, setShowSMSModal] = useState(false);
+  const [emailAddress, setEmailAddress] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [shareMessage, setShareMessage] = useState('');
+
+  const shareViaEmail = () => {
+    if (!workflowData.finalReport || !emailAddress) return;
+
+    const report = workflowData.finalReport;
+    const subject = `AI Analysis Report - ${report.id}`;
+    const body = `
+Hi,
+
+Please find the AI Image Analysis Report summary below:
+
+Report ID: ${report.id}
+Generated: ${new Date(report.timestamp).toLocaleString()}
+
+Analysis Overview:
+- Original Image: ${report.analysis.originalImage}
+- Total Objects Detected: ${report.analysis.totalObjectsDetected}
+- Objects Included: ${report.analysis.objectsIncluded}
+- Objects Verified: ${report.summary.totalVerified}
+
+Condition Breakdown:
+- Excellent: ${report.summary.conditionBreakdown.excellent}
+- Good: ${report.summary.conditionBreakdown.good}
+- Fair: ${report.summary.conditionBreakdown.fair}
+- Poor: ${report.summary.conditionBreakdown.poor}
+- Damaged: ${report.summary.conditionBreakdown.damaged}
+
+Signed by: ${report.signature.data}
+Signature Date: ${new Date(report.signature.timestamp).toLocaleString()}
+
+Please download the full report for complete details.
+
+Best regards,
+AI Image Analysis System
+    `.trim();
+
+    // Create mailto link
+    const mailtoLink = `mailto:${emailAddress}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoLink;
+
+    // Show success message
+    setShareMessage('Email client opened! Please send the email.');
+    setTimeout(() => {
+      setShareMessage('');
+      setShowEmailModal(false);
+      setEmailAddress('');
+    }, 3000);
+  };
+
+  const shareViaSMS = () => {
+    if (!workflowData.finalReport || !phoneNumber) return;
+
+    const report = workflowData.finalReport;
+    const message = `AI Analysis Report ${report.id}: ${report.summary.totalVerified} objects verified. Report generated on ${new Date(report.timestamp).toLocaleDateString()}. View full details in the downloaded report.`;
+
+    // Create SMS link (works on mobile devices)
+    const smsLink = `sms:${phoneNumber}${/iPhone|iPad|iPod/.test(navigator.userAgent) ? '&' : '?'}body=${encodeURIComponent(message)}`;
+    window.location.href = smsLink;
+
+    // Show success message
+    setShareMessage('SMS app opened! Please send the message.');
+    setTimeout(() => {
+      setShareMessage('');
+      setShowSMSModal(false);
+      setPhoneNumber('');
+    }, 3000);
+  };
 
   const downloadPDF = () => {
     if (!workflowData.finalReport) return;
@@ -364,6 +437,101 @@ const CompleteStage = () => {
       backgroundColor: '#6b7280',
       color: 'white',
     },
+    shareEmailButton: {
+      background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+      color: 'white',
+      boxShadow: '0 4px 15px 0 rgba(59, 130, 246, 0.3)',
+    },
+    shareSMSButton: {
+      background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+      color: 'white',
+      boxShadow: '0 4px 15px 0 rgba(139, 92, 246, 0.3)',
+    },
+    modalOverlay: {
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000,
+    },
+    modalContent: {
+      backgroundColor: 'white',
+      borderRadius: '16px',
+      padding: '2rem',
+      maxWidth: '500px',
+      width: '90%',
+      boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+    },
+    modalTitle: {
+      fontSize: '1.5rem',
+      fontWeight: '600',
+      marginBottom: '1rem',
+      color: '#374151',
+    },
+    modalDescription: {
+      fontSize: '0.95rem',
+      color: '#6b7280',
+      marginBottom: '1.5rem',
+      lineHeight: '1.5',
+    },
+    inputGroup: {
+      marginBottom: '1.5rem',
+    },
+    label: {
+      display: 'block',
+      fontSize: '0.9rem',
+      fontWeight: '600',
+      marginBottom: '0.5rem',
+      color: '#374151',
+    },
+    input: {
+      width: '100%',
+      padding: '0.75rem',
+      border: '2px solid #e5e7eb',
+      borderRadius: '8px',
+      fontSize: '1rem',
+      boxSizing: 'border-box',
+      transition: 'border-color 0.3s ease',
+    },
+    modalActions: {
+      display: 'flex',
+      gap: '1rem',
+      justifyContent: 'flex-end',
+    },
+    cancelButton: {
+      padding: '0.75rem 1.5rem',
+      border: '2px solid #e5e7eb',
+      borderRadius: '8px',
+      backgroundColor: 'white',
+      color: '#6b7280',
+      fontWeight: '600',
+      cursor: 'pointer',
+      transition: 'all 0.3s ease',
+    },
+    sendButton: {
+      padding: '0.75rem 1.5rem',
+      border: 'none',
+      borderRadius: '8px',
+      backgroundColor: '#059669',
+      color: 'white',
+      fontWeight: '600',
+      cursor: 'pointer',
+      transition: 'all 0.3s ease',
+    },
+    successMessage: {
+      backgroundColor: '#d1fae5',
+      color: '#065f46',
+      padding: '0.75rem 1rem',
+      borderRadius: '8px',
+      marginTop: '1rem',
+      textAlign: 'center',
+      fontWeight: '600',
+    },
     reportPreview: {
       backgroundColor: '#ffffff',
       border: '1px solid #e2e8f0',
@@ -442,6 +610,30 @@ const CompleteStage = () => {
             transform: translateY(-2px);
             box-shadow: 0 8px 25px 0 rgba(245, 158, 11, 0.4);
           }
+          
+          .share-email-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px 0 rgba(59, 130, 246, 0.4);
+          }
+          
+          .share-sms-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px 0 rgba(139, 92, 246, 0.4);
+          }
+          
+          .modal-input:focus {
+            outline: none;
+            border-color: #059669;
+          }
+          
+          .cancel-button:hover {
+            background-color: #f9fafb;
+            border-color: #d1d5db;
+          }
+          
+          .send-button:hover {
+            background-color: #047857;
+          }
         `}
       </style>
       
@@ -477,14 +669,14 @@ const CompleteStage = () => {
           </div>
         </div>
 
-        {/* Download Actions */}
+        {/* Download and Share Actions */}
         <div style={styles.actionsContainer}>
           <button
             onClick={downloadPDF}
             style={{ ...styles.actionButton, ...styles.downloadButton }}
             className="download-button"
           >
-            Download Report
+            📄 Download Report
           </button>
           
           <button
@@ -492,16 +684,144 @@ const CompleteStage = () => {
             style={{ ...styles.actionButton, ...styles.downloadCSVButton }}
             className="download-csv-button"
           >
-            Export CSV
+            📊 Export CSV
+          </button>
+          
+          <button
+            onClick={() => setShowEmailModal(true)}
+            style={{ ...styles.actionButton, ...styles.shareEmailButton }}
+            className="share-email-button"
+          >
+            📧 Share via Email
+          </button>
+          
+          <button
+            onClick={() => setShowSMSModal(true)}
+            style={{ ...styles.actionButton, ...styles.shareSMSButton }}
+            className="share-sms-button"
+          >
+            💬 Share via SMS
           </button>
           
           <button
             onClick={resetWorkflow}
             style={{ ...styles.actionButton, ...styles.restartButton }}
           >
-            Start New Analysis
+            🔄 Start New Analysis
           </button>
         </div>
+
+        {/* Email Modal */}
+        {showEmailModal && (
+          <div style={styles.modalOverlay} onClick={() => setShowEmailModal(false)}>
+            <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+              <h3 style={styles.modalTitle}>📧 Share Report via Email</h3>
+              <p style={styles.modalDescription}>
+                Enter the recipient's email address. Your default email client will open with a pre-filled message containing the report summary.
+              </p>
+              
+              <div style={styles.inputGroup}>
+                <label style={styles.label}>Email Address</label>
+                <input
+                  type="email"
+                  value={emailAddress}
+                  onChange={(e) => setEmailAddress(e.target.value)}
+                  placeholder="recipient@example.com"
+                  style={styles.input}
+                  className="modal-input"
+                />
+              </div>
+              
+              {shareMessage && (
+                <div style={styles.successMessage}>
+                  {shareMessage}
+                </div>
+              )}
+              
+              <div style={styles.modalActions}>
+                <button
+                  onClick={() => {
+                    setShowEmailModal(false);
+                    setEmailAddress('');
+                    setShareMessage('');
+                  }}
+                  style={styles.cancelButton}
+                  className="cancel-button"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={shareViaEmail}
+                  disabled={!emailAddress}
+                  style={{
+                    ...styles.sendButton,
+                    opacity: !emailAddress ? 0.5 : 1,
+                    cursor: !emailAddress ? 'not-allowed' : 'pointer'
+                  }}
+                  className="send-button"
+                >
+                  Send Email
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* SMS Modal */}
+        {showSMSModal && (
+          <div style={styles.modalOverlay} onClick={() => setShowSMSModal(false)}>
+            <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+              <h3 style={styles.modalTitle}>💬 Share Report via SMS</h3>
+              <p style={styles.modalDescription}>
+                Enter the recipient's phone number. Your SMS app will open with a pre-filled message containing a brief report summary.
+              </p>
+              
+              <div style={styles.inputGroup}>
+                <label style={styles.label}>Phone Number</label>
+                <input
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  placeholder="+1 234 567 8900"
+                  style={styles.input}
+                  className="modal-input"
+                />
+              </div>
+              
+              {shareMessage && (
+                <div style={styles.successMessage}>
+                  {shareMessage}
+                </div>
+              )}
+              
+              <div style={styles.modalActions}>
+                <button
+                  onClick={() => {
+                    setShowSMSModal(false);
+                    setPhoneNumber('');
+                    setShareMessage('');
+                  }}
+                  style={styles.cancelButton}
+                  className="cancel-button"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={shareViaSMS}
+                  disabled={!phoneNumber}
+                  style={{
+                    ...styles.sendButton,
+                    opacity: !phoneNumber ? 0.5 : 1,
+                    cursor: !phoneNumber ? 'not-allowed' : 'pointer'
+                  }}
+                  className="send-button"
+                >
+                  Send SMS
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Report Preview */}
         <div style={styles.reportPreview}>

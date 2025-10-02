@@ -73,12 +73,15 @@ const ReviewObjectsStage = () => {
 
   useEffect(() => {
     // Initialize reviewed objects from analysis results
-    if (workflowData.analysisResult?.detections && reviewedObjects.length === 0) {
-      const initialObjects = workflowData.analysisResult.detections.map((detection, index) => ({
-        id: detection.id || index + 1,
-        class: detection.class,
-        confidence: detection.confidence,
-        bbox: detection.bbox,
+    // Handle both new API format (predictions) and old format (detections)
+    const predictions = workflowData.analysisResult?.predictions || workflowData.analysisResult?.detections;
+    
+    if (predictions && reviewedObjects.length === 0) {
+      const initialObjects = predictions.map((item, index) => ({
+        id: item.id || index + 1,
+        class: item.class_name || item.class, // Handle both new (class_name) and old (class) formats
+        confidence: item.confidence,
+        bbox: item.bounding_box || item.bbox, // Handle both new (bounding_box) and old (bbox) formats
         condition: 'Good', // Default condition
         comments: '',
         verified: false,

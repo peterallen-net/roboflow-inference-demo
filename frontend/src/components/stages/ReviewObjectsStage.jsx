@@ -72,28 +72,51 @@ const ReviewObjectsStage = () => {
   });
 
   useEffect(() => {
-    // Initialize reviewed objects from analysis results
-    // Handle both new API format (predictions) and old format (detections)
-    const predictions = workflowData.analysisResult?.predictions || workflowData.analysisResult?.detections;
-    
-    if (predictions && reviewedObjects.length === 0) {
-      const initialObjects = predictions.map((item, index) => ({
-        id: item.id || index + 1,
-        class: item.class_name || item.class, // Handle both new (class_name) and old (class) formats
-        confidence: item.confidence,
-        bbox: item.bounding_box || item.bbox, // Handle both new (bounding_box) and old (bbox) formats
-        condition: 'Good', // Default condition
-        comments: '',
-        verified: false,
-        exclude: false,
-        handlingCode: '', // New field
-        damageType: '', // New field
-        damageLocation: '', // New field
-      }));
-      setReviewedObjects(initialObjects);
-      updateWorkflowData({ reviewedObjects: initialObjects });
+    // Initialize reviewed objects from modified list (Step 2) if available, otherwise from raw predictions
+    if (reviewedObjects.length === 0) {
+      // Check if we have a modified object list from Step 2
+      if (workflowData.modifiedObjectList && workflowData.modifiedObjectList.length > 0) {
+        // Use the modified list from Step 2 (includes quantity changes and manual additions)
+        const initialObjects = workflowData.modifiedObjectList.map((item, index) => ({
+          id: index + 1,
+          class: item.name,
+          confidence: item.confidence / 100, // Convert from percentage back to decimal
+          bbox: null, // Bounding box info not needed in Step 3
+          condition: 'Good',
+          comments: '',
+          verified: false,
+          exclude: false,
+          handlingCode: '',
+          damageType: '',
+          damageLocation: '',
+          manualEntry: item.isManual || false,
+        }));
+        setReviewedObjects(initialObjects);
+        updateWorkflowData({ reviewedObjects: initialObjects });
+      } else {
+        // Fallback: Use raw predictions from analysis result
+        const predictions = workflowData.analysisResult?.predictions || workflowData.analysisResult?.detections;
+        
+        if (predictions) {
+          const initialObjects = predictions.map((item, index) => ({
+            id: item.id || index + 1,
+            class: item.class_name || item.class,
+            confidence: item.confidence,
+            bbox: item.bounding_box || item.bbox,
+            condition: 'Good',
+            comments: '',
+            verified: false,
+            exclude: false,
+            handlingCode: '',
+            damageType: '',
+            damageLocation: '',
+          }));
+          setReviewedObjects(initialObjects);
+          updateWorkflowData({ reviewedObjects: initialObjects });
+        }
+      }
     }
-  }, [workflowData.analysisResult, reviewedObjects.length, updateWorkflowData]);
+  }, [workflowData.modifiedObjectList, workflowData.analysisResult, reviewedObjects.length, updateWorkflowData]);
 
   const updateObject = (id, updates) => {
     const updated = reviewedObjects.map(obj =>

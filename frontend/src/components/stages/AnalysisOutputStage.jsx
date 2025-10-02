@@ -818,7 +818,12 @@ const AnalysisOutputStage = () => {
         </button>
         
         <button
-          onClick={() => goToStage(2)}
+          onClick={() => {
+            // Save the current object list to workflowData before navigating
+            const objectList = getObjectList();
+            updateWorkflowData({ modifiedObjectList: objectList });
+            goToStage(2);
+          }}
           style={{
             ...styles.actionButton,
             ...styles.reviewItemsButton
